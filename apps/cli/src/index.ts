@@ -16,6 +16,7 @@ import {
 import { program } from "commander";
 import { createWriteStream } from "fs";
 import { PNG } from "pngjs";
+import { AndroidKeyCode } from "./AndroidKeyCode.js";
 
 program
     .name("tango-cli")
@@ -484,6 +485,96 @@ program
         const client = createClient();
         await client.killServer();
     });
+
+program
+    .command("tap [args...]")
+    .option("--image <image>", "image file path")
+    .option("--point <point>", "point to tap (x:y)")
+    .usage("[-- <args...> ")
+    .description("tap on device")
+    .configureHelp({ showGlobalOptions: true })
+    .action(
+        async (
+            args: string[],
+            {
+                image,
+                point,
+                ...options
+            }: DeviceCommandOptions & { image: string; point: string },
+        ) => {
+            // const adb = await createAdb(options);
+            // let target = [0, 0];
+            // if (image) {
+            //     //TODO: find image region on screen
+            //     const framebuffer = await adb.framebuffer();
+            //     console.log("image", image);
+            //     const subImage = PNG.sync.read(readFileSync(image));
+            //     const matcheImages = await finder.default.findMatch({
+            //         haystack: "screenshot.png",
+            //         needle: "browser.png",
+            //     });
+            //     console.log("region", matcheImages);
+            //     // if (!region) {
+            //     //     throw new Error("cannot find image on screen");
+            //     // }
+            // } else if (point) {
+            //     target = point.split(":").map((p) => Number(p));
+            // }
+            // // sample command: adb shell input tap 100 500
+            // const cmd = `input tap ${target.join(" ")}`;
+            // console.log(`cmd: ${cmd}`);
+            // const protocol = await adb.subprocess.shell(cmd);
+            // let result = await readProtocolResult(protocol);
+            // console.log(result);
+        },
+    );
+
+createDeviceCommand("type [args...]")
+    .usage("[-- <args...> ")
+    .description("type on device")
+    .configureHelp({ showGlobalOptions: true })
+    .action(async (args: string[], options: DeviceCommandOptions) => {
+        const adb = await createAdb(options);
+        const text = args[0];
+        // sample command: adb shell input text "hello world"
+        const protocol = await adb.subprocess.shell(`input text "${text}"`);
+        let result = await readProtocolResult(protocol);
+        console.log(result);
+    });
+
+createDeviceCommand("keyevent [args...]")
+    .option("-r <repeat>", "repeat event", (value) => Number(value), 1)
+    .usage("[-- <args...> ")
+    .description("send keyevent on device")
+    .configureHelp({ showGlobalOptions: true })
+    .action(
+        async (
+            args: string[],
+            { r, ...options }: DeviceCommandOptions & { r: number },
+        ) => {
+            const adb = await createAdb(options);
+            const key = args[0];
+
+            if (!key) {
+                throw new Error("key is required");
+            }
+
+            const keyMap = Object.keys(AndroidKeyCode).reduce(
+                (map, key) => ({
+                    ...map,
+                    [AndroidKeyCode[key as keyof typeof AndroidKeyCode]]: key,
+                }),
+                {} as any,
+            );
+
+            // sample command: adb shell input keyevent 3
+            const cmd = `input keyevent ${keyMap[key] ? keyMap[key] : key}`;
+            console.log(`cmd: ${cmd}`);
+            for (let i = 0; i < r; i++) {
+                await adb.subprocess.shell(cmd);
+            }
+        },
+    );
 
 program.parse();
 
