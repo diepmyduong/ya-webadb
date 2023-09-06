@@ -277,6 +277,18 @@ createDeviceCommand("info [args...]")
         console.log(JSON.stringify(info, undefined, 4));
     });
 
+createDeviceCommand("openapp [args...]")
+    .usage("[-- <args...> ")
+    .description("open app on device")
+    .configureHelp({ showGlobalOptions: true })
+    .action(async (args: string[], options: DeviceCommandOptions) => {
+        const adb = await createAdb(options);
+        const app = args[0];
+        const activity = args[1];
+        // sample command: adb shell am start -n com.android.settings/.Settings
+        await adb.subprocess.shell(`am start -n ${app}/${activity}`);
+    });
+
 program
     .command("kill-server")
     .description("kill the server if it is running")
