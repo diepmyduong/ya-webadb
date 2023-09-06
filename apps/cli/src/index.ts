@@ -368,6 +368,114 @@ createDeviceCommand("killapp [args...]")
         console.log(result);
     });
 
+createDeviceCommand("swipe [args...]")
+    .option("-a <action>", "action type: down|up|left|right|point", "up")
+    .usage("[-- <args...> ")
+    .description("swipe on device")
+    .configureHelp({ showGlobalOptions: true })
+    .action(
+        async (
+            args: string[],
+            options: DeviceCommandOptions & {
+                a: "down" | "up" | "left" | "right" | "point";
+            },
+        ) => {
+            const adb = await createAdb(options);
+            const action = options.a;
+            let from: number[] = [0, 0];
+            let to: number[] = [0, 0];
+
+            const framebuffer = await adb.framebuffer();
+            const centerPoint = [framebuffer.width / 2, framebuffer.height / 2];
+
+            switch (action) {
+                case "down": {
+                    const distance = Number(args[0]) || 100;
+                    from = [
+                        centerPoint[0]!,
+                        Math.max(centerPoint[1]! - distance / 2, 100),
+                    ];
+                    to = [
+                        centerPoint[0]!,
+                        Math.min(
+                            centerPoint[1]! + distance / 2,
+                            framebuffer.height - 100,
+                        ),
+                    ];
+                    break;
+                }
+                case "up": {
+                    const distance = Number(args[0]) || 100;
+                    from = [
+                        centerPoint[0]!,
+                        Math.min(
+                            centerPoint[1]! + distance / 2,
+                            framebuffer.height - 100,
+                        ),
+                    ];
+                    to = [
+                        centerPoint[0]!,
+                        Math.max(centerPoint[1]! - distance / 2, 100),
+                    ];
+                    break;
+                }
+                case "left": {
+                    const distance = Number(args[0]) || 100;
+                    from = [
+                        Math.min(
+                            centerPoint[0]! + distance / 2,
+                            framebuffer.width - 100,
+                        ),
+                        centerPoint[1]!,
+                    ];
+                    to = [
+                        Math.max(
+                            centerPoint[0]! - distance / 2,
+                            framebuffer.width - 100,
+                        ),
+                        centerPoint[1]!,
+                    ];
+                    break;
+                }
+                case "right": {
+                    const distance = Number(args[0]) || 100;
+                    from = [
+                        Math.max(
+                            centerPoint[0]! - distance / 2,
+                            framebuffer.width,
+                        ),
+                        centerPoint[1]!,
+                    ];
+                    to = [
+                        Math.min(
+                            centerPoint[0]! + distance / 2,
+                            framebuffer.width,
+                        ),
+                        centerPoint[1]!,
+                    ];
+                    break;
+                }
+                case "point": {
+                    if (!args[0]) {
+                        throw new Error("point is required");
+                    }
+                    const [x1, y1, x2, y2] = args[0].split(":");
+                    from = [Number(x1), Number(y1)];
+                    to = [Number(x2), Number(y2)];
+                    break;
+                }
+            }
+            // sample command: adb shell input swipe 100 500 100 1450
+            const cmd = `input swipe ${from.join(" ")} ${to.join(" ")}`;
+            console.log(`action: ${action} cmd: ${cmd}`);
+            const protocol = await adb.subprocess.shell(
+                `input swipe ${from.join(" ")} ${to.join(" ")}`,
+            );
+            let result = await readProtocolResult(protocol);
+            console.log(result);
+        },
+    );
+
 program
     .command("kill-server")
     .description("kill the server if it is running")
