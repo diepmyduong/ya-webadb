@@ -2,7 +2,12 @@
 
 import "source-map-support/register.js";
 
-import { Adb, AdbServerClient, KNOWN_FEATURES } from "@yume-chan/adb";
+import {
+    Adb,
+    AdbServerClient,
+    KNOWN_FEATURES,
+    type AdbSubprocessProtocol,
+} from "@yume-chan/adb";
 import { AdbServerNodeTcpConnection } from "@yume-chan/adb-server-node-tcp";
 import {
     ConsumableWritableStream,
@@ -284,9 +289,70 @@ createDeviceCommand("openapp [args...]")
     .action(async (args: string[], options: DeviceCommandOptions) => {
         const adb = await createAdb(options);
         const app = args[0];
-        const activity = args[1];
+        let activity = args[1];
+
+        if (!activity) {
+            // find default activity
+            const protocol = await adb.subprocess.shell(
+                `dumpsys package ${app} | grep -A 1 android.intent.action.MAIN:`,
+            );
+            let result = await readProtocolResult(protocol);
+            const regex = new RegExp(`${app}\/(.\\S+)`);
+            const match = regex.exec(result);
+            if (!match) {
+                throw new Error("cannot find default activity");
+            }
+            activity = match[1];
+        }
         // sample command: adb shell am start -n com.android.settings/.Settings
-        await adb.subprocess.shell(`am start -n ${app}/${activity}`);
+        const protocol = await adb.subprocess.shell(
+            `am start -n ${app}/${activity}`,
+        );
+        let result = await readProtocolResult(protocol);
+        console.log(result);
+    });
+
+createDeviceCommand("listapps [args...]")
+    .usage("[-- <args...> ")
+    .description("list apps on device")
+    .configureHelp({ showGlobalOptions: true })
+    .action(async (args: string[], options: DeviceCommandOptions) => {
+        const adb = await createAdb(options);
+        // sample command: adb shell pm list packages -f
+        const protocol = await adb.subprocess.shell("pm list packages -f");
+        let result = await readProtocolResult(protocol);
+        const lines = result.split("\r\n");
+        const apps = lines
+            .filter((l) => l !== "")
+            .map((line) => {
+                const parts = line.split("=");
+                const packageName = parts[1]!;
+                const appPath = parts[0]!.split(":")[1];
+                return { packageName, appPath };
+            });
+        console.log(JSON.stringify(apps, undefined, 4));
+    });
+
+createDeviceCommand("appactivity [args...]")
+    .usage("[-- <args...> ")
+    .description("get app activity on device")
+    .configureHelp({ showGlobalOptions: true })
+    .action(async (args: string[], options: DeviceCommandOptions) => {
+        const adb = await createAdb(options);
+        const app = args[0];
+        // sample command: adb shell dumpsys package com.android.settings | grep -E 'mFocusedActivity'
+        const protocol = await adb.subprocess.shell(
+            `dumpsys package ${app} | grep -i '${app}\/' | grep Activity`,
+        );
+        let result = await readProtocolResult(protocol);
+        const regex = new RegExp(`${app}\/(.\\S+)`, "g");
+        const match = result.matchAll(regex);
+        const activities = Array.from(match)
+            .map((m) => m[1])
+            // remove duplicates
+            .filter((value, index, self) => self.indexOf(value) === index);
+
+        console.log(JSON.stringify(activities, undefined, 4));
     });
 
 program
@@ -299,3 +365,17 @@ program
     });
 
 program.parse();
+
+async function readProtocolResult(protocol: AdbSubprocessProtocol) {
+    const reader = protocol.stdout.getReader();
+    const decoder = new TextDecoder();
+    let result = "";
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+            break;
+        }
+        result += decoder.decode(value);
+    }
+    return result;
+}
