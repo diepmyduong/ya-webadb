@@ -25,6 +25,9 @@ importers:
       commander:
         specifier: ^10.0.1
         version: 10.0.1
+      pngjs:
+        specifier: ~7.0.0
+        version: 7.0.0
       source-map-support:
         specifier: ^0.5.21
         version: 0.5.21
@@ -35,6 +38,9 @@ importers:
       '@types/node':
         specifier: ^20.4.0
         version: 20.4.0
+      '@types/pngjs':
+        specifier: ~6.0.1
+        version: 6.0.1
       '@yume-chan/eslint-config':
         specifier: workspace:^1.0.0
         version: link:../../toolchain/eslint-config
@@ -3700,6 +3706,12 @@ packages:
 
   /@types/node@20.4.0:
     resolution: {integrity: sha512-jfT7iTf/4kOQ9S7CHV9BIyRaQqHu67mOjsIQBC3BKZvzvUB6zLxEwJ6sBE3ozcvP8kF6Uk5PXN0Q+c0dfhGX0g==}
+
+  /@types/pngjs@6.0.1:
+    resolution: {integrity: sha512-J39njbdW1U/6YyVXvC9+1iflZghP8jgRf2ndYghdJb5xL49LYDB+1EuAxfbuJ2IBbWIL3AjHPQhgaTxT3YaYeg==}
+    dependencies:
+      '@types/node': 20.4.0
+    dev: true
 
   /@types/prettier@2.7.3:
     resolution: {integrity: sha512-+68kP9yzs4LMp7VNh8gdzMSPZFL44MLGqiHWvttYJe+6qnuVr4Ek9wSBQoveqY/r+LwjCcU29kNVkidwim+kYA==}
@@ -8403,6 +8415,11 @@ packages:
     dependencies:
       find-up: 4.1.0
     dev: true
+
+  /pngjs@7.0.0:
+    resolution: {integrity: sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow==}
+    engines: {node: '>=14.19.0'}
+    dev: false
 
   /postcss-modules-extract-imports@3.0.0(postcss@8.4.24):
     resolution: {integrity: sha512-bdHleFnP3kZ4NYDhuGlVK+CMrQ/pqUm8bx/oGL93K6gVwiclvX5x0n76fYMKuIGKzlABOy13zsvqjb0f92TEXw==}
