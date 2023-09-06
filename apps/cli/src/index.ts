@@ -14,9 +14,10 @@ import {
     WritableStream,
 } from "@yume-chan/stream-extra";
 import { program } from "commander";
-import { createWriteStream } from "fs";
+import { createWriteStream, mkdirSync, unlinkSync } from "fs";
 import { PNG } from "pngjs";
-import { AndroidKeyCode } from "./AndroidKeyCode.js";
+import { AndroidKeyCode } from "./androidKeyCode.js";
+import { templateMatcher } from "./templateMatcher.js";
 
 program
     .name("tango-cli")
@@ -237,27 +238,8 @@ createDeviceCommand("capture [args...]")
     .configureHelp({ showGlobalOptions: true })
     .action(async (args: string[], options: DeviceCommandOptions) => {
         const adb = await createAdb(options);
-        const framebuffer = await adb.framebuffer();
-
         const output = (args[0] || "screenshot") + ".png";
-
-        const png = new PNG({
-            width: framebuffer.width,
-            height: framebuffer.height,
-        });
-        png.data = Buffer.from(framebuffer.data);
-
-        const writeStream = createWriteStream(output);
-        png.pack().pipe(writeStream);
-
-        writeStream.once("finish", () => {
-            console.log("Screenshot saved to " + output);
-            process.exit(0);
-        });
-        writeStream.once("error", (e) => {
-            console.error(e);
-            process.exit(1);
-        });
+        await makeScreenshot(adb, output);
     });
 
 createDeviceCommand("info [args...]")
@@ -502,30 +484,31 @@ program
                 ...options
             }: DeviceCommandOptions & { image: string; point: string },
         ) => {
-            // const adb = await createAdb(options);
-            // let target = [0, 0];
-            // if (image) {
-            //     //TODO: find image region on screen
-            //     const framebuffer = await adb.framebuffer();
-            //     console.log("image", image);
-            //     const subImage = PNG.sync.read(readFileSync(image));
-            //     const matcheImages = await finder.default.findMatch({
-            //         haystack: "screenshot.png",
-            //         needle: "browser.png",
-            //     });
-            //     console.log("region", matcheImages);
-            //     // if (!region) {
-            //     //     throw new Error("cannot find image on screen");
-            //     // }
-            // } else if (point) {
-            //     target = point.split(":").map((p) => Number(p));
-            // }
-            // // sample command: adb shell input tap 100 500
-            // const cmd = `input tap ${target.join(" ")}`;
-            // console.log(`cmd: ${cmd}`);
-            // const protocol = await adb.subprocess.shell(cmd);
-            // let result = await readProtocolResult(protocol);
-            // console.log(result);
+            const adb = await createAdb(options);
+            let target = [0, 0];
+            if (image) {
+                // make a screenshot
+                mkdirSync("tmp", { recursive: true });
+                const screenshotPath = `tmp/screenshot-${new Date().getTime()}.png`;
+                await makeScreenshot(adb, screenshotPath);
+
+                // find region of image
+                const { tx, ty, bx, by } = await templateMatcher(
+                    screenshotPath,
+                    image,
+                );
+                target = [(tx + bx) / 2, (ty + by) / 2];
+                console.log(`match region: ${tx} ${ty} ${bx} ${by}`);
+                unlinkSync(screenshotPath);
+            } else if (point) {
+                target = point.split(":").map((p) => Number(p));
+            }
+            // sample command: adb shell input tap 100 500
+            const cmd = `input tap ${target.join(" ")}`;
+            console.log(`cmd: ${cmd}`);
+            const protocol = await adb.subprocess.shell(cmd);
+            let result = await readProtocolResult(protocol);
+            console.log(result);
         },
     );
 
@@ -577,6 +560,28 @@ createDeviceCommand("keyevent [args...]")
     );
 
 program.parse();
+
+async function makeScreenshot(adb: Adb, output: string) {
+    const framebuffer = await adb.framebuffer();
+
+    return new Promise<void>((resolve, reject) => {
+        const png = new PNG({
+            width: framebuffer.width,
+            height: framebuffer.height,
+        });
+        png.data = Buffer.from(framebuffer.data);
+
+        const writeStream = createWriteStream(output);
+        png.pack().pipe(writeStream);
+
+        writeStream.once("finish", () => {
+            resolve();
+        });
+        writeStream.once("error", (e) => {
+            reject(e);
+        });
+    });
+}
 
 async function readProtocolResult(protocol: AdbSubprocessProtocol) {
     const reader = protocol.stdout.getReader();
