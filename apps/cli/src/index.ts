@@ -355,6 +355,19 @@ createDeviceCommand("appactivity [args...]")
         console.log(JSON.stringify(activities, undefined, 4));
     });
 
+createDeviceCommand("killapp [args...]")
+    .usage("[-- <args...> ")
+    .description("kill app on device")
+    .configureHelp({ showGlobalOptions: true })
+    .action(async (args: string[], options: DeviceCommandOptions) => {
+        const adb = await createAdb(options);
+        const app = args[0];
+        // sample command: adb shell am force-stop com.android.settings
+        const protocol = await adb.subprocess.shell(`am force-stop ${app}`);
+        let result = await readProtocolResult(protocol);
+        console.log(result);
+    });
+
 program
     .command("kill-server")
     .description("kill the server if it is running")
