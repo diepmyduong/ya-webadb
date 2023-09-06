@@ -2,7 +2,7 @@
 
 import "source-map-support/register.js";
 
-import { Adb, AdbServerClient } from "@yume-chan/adb";
+import { Adb, AdbServerClient, KNOWN_FEATURES } from "@yume-chan/adb";
 import { AdbServerNodeTcpConnection } from "@yume-chan/adb-server-node-tcp";
 import {
     ConsumableWritableStream,
@@ -252,6 +252,29 @@ createDeviceCommand("capture [args...]")
             console.error(e);
             process.exit(1);
         });
+    });
+
+createDeviceCommand("info [args...]")
+    .usage("[-- <args...> ")
+    .description("show device info")
+    .configureHelp({ showGlobalOptions: true })
+    .action(async (args: string[], options: DeviceCommandOptions) => {
+        const adb = await createAdb(options);
+
+        const info = {
+            serial: await adb.getProp("ro.serialno"),
+            product: await adb.getProp("ro.product.name"),
+            model: await adb.getProp("ro.product.model"),
+            device: await adb.getProp("ro.product.device"),
+            sdk: await adb.getProp("ro.build.version.sdk"),
+            release: await adb.getProp("ro.build.version.release"),
+            feature: adb.banner.features.map((feature) => {
+                const knownFeature = KNOWN_FEATURES[feature];
+                return knownFeature ? `${feature} (${knownFeature})` : feature;
+            }),
+        };
+
+        console.log(JSON.stringify(info, undefined, 4));
     });
 
 program
