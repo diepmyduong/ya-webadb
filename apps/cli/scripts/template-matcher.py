@@ -22,31 +22,38 @@ def template_matching(input_image_path, template_image_path, output_image_path=N
         result = cv2.matchTemplate(input_image, template_image, cv2.TM_CCOEFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
 
+        max_region = {
+            "tx": int(max_loc[0]),
+            "ty": int(max_loc[1]),
+            "bx": int((max_loc[0] + template_image.shape[1]) ),
+            "by": int((max_loc[1] + template_image.shape[0]) ),
+            "confidence": f"{max_val:.2f}",
+            "scale": f"{scale:.2f}"
+        }
+        
+        # Draw a rectangle on the input image to mark the best matched region
+        cv2.rectangle(input_image, (max_region["tx"], max_region["ty"]),
+                      (max_region["bx"], max_region["by"]), (0, 0, 255), 2)
+        # print("Max confidence: ", max_val)
+     
         # Check if the confidence is above the threshold and better than the previous best
         if max_val >= confidence_threshold and max_val > best_confidence:
             # Update the best match
-            best_match_region = {
-                "tx": int(max_loc[0]),
-                "ty": int(max_loc[1]),
-                "bx": int((max_loc[0] + template_image.shape[1]) ),
-                "by": int((max_loc[1] + template_image.shape[0]) ),
-                "confidence": f"{max_val:.2f}",
-                "scale": f"{scale:.2f}"
-            }
+            best_match_region = max_region
             best_confidence = max_val
-
-            cv2.rectangle(input_image, (best_match_region["tx"], best_match_region["ty"]),
-                      (best_match_region["bx"], best_match_region["by"]), (0, 0, 255), 2)
             break
 
     # Draw a rectangle on the input image to mark the best matched region
     if best_match_region:
         cv2.rectangle(input_image, (best_match_region["tx"], best_match_region["ty"]),
                       (best_match_region["bx"], best_match_region["by"]), (0, 255, 0), 2)
+    
 
     # Save the result image with the region line drawn
     if output_image_path:
         cv2.imwrite(output_image_path, input_image)
+
+    
 
     return best_match_region
 

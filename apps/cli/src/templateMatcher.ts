@@ -15,26 +15,35 @@ export function templateMatcher(
     options: {
         confidence?: number;
         scaleSteps?: number[];
+        output?: string;
     } = {},
 ) {
-    const cmd = `python3 scripts/template-matcher.py ${backgroundImg} ${templateImg}`;
+    let cmd = `python3 scripts/template-matcher.py ${backgroundImg} ${templateImg}`;
 
     if (options.confidence) {
-        cmd.concat(` -c ${options.confidence}`);
+        cmd += ` -c ${options.confidence}`;
     }
     if (options.scaleSteps) {
-        cmd.concat(` -s ${options.scaleSteps.join(",")}`);
+        cmd += ` -s ${options.scaleSteps.join(",")}`;
+    }
+    if (options.output) {
+        cmd += ` -o ${options.output}`;
     }
 
-    return new Promise<MatchRegion>((resolve, reject) => {
+    console.log("cmd", cmd);
+
+    return new Promise<MatchRegion | null>((resolve, reject) => {
         exec(cmd, (err: any, stdout: any, stderr: any) => {
             if (err) {
                 console.log(err);
                 reject(err);
             }
-            console.log("stdout", stdout);
-            const matchRegion = JSON.parse(stdout);
-            resolve(matchRegion);
+            try {
+                const matchRegion = JSON.parse(stdout);
+                resolve(matchRegion);
+            } catch (err) {
+                resolve(null);
+            }
         });
     });
 }

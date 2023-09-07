@@ -2,21 +2,17 @@
 
 import "source-map-support/register.js";
 
-import {
-    Adb,
-    AdbServerClient,
-    KNOWN_FEATURES,
-    type AdbSubprocessProtocol,
-} from "@yume-chan/adb";
+import { Adb, AdbServerClient, KNOWN_FEATURES } from "@yume-chan/adb";
 import { AdbServerNodeTcpConnection } from "@yume-chan/adb-server-node-tcp";
 import {
     ConsumableWritableStream,
     WritableStream,
 } from "@yume-chan/stream-extra";
 import { program } from "commander";
-import { createWriteStream, mkdirSync, unlinkSync } from "fs";
-import { PNG } from "pngjs";
+import { mkdirSync, readFileSync, unlinkSync } from "fs";
 import { AndroidKeyCode } from "./androidKeyCode.js";
+import { makeScreenshot, readProtocolResult } from "./common.js";
+import { FlowRunner } from "./flowRunner.js";
 import { templateMatcher } from "./templateMatcher.js";
 
 program
@@ -274,6 +270,11 @@ createDeviceCommand("device-info [args...]")
                 publicIp: await adb.subprocess
                     .shell(`curl -s ipinfo.io/ip`)
                     .then(readProtocolResult),
+                proxyIp: await adb.subprocess
+                    .shell(
+                        `curl -s ipinfo.io/ip -x "$(settings get global http_proxy)"`,
+                    )
+                    .then(readProtocolResult),
             },
             location: {
                 gps: await adb.subprocess
@@ -294,6 +295,8 @@ createDeviceCommand("open-app [args...]")
         const app = args[0];
         let activity = args[1];
 
+        console.log("activity: ", activity);
+
         if (!activity) {
             // find default activity
             const protocol = await adb.subprocess.shell(
@@ -308,9 +311,10 @@ createDeviceCommand("open-app [args...]")
             activity = match[1];
         }
         // sample command: adb shell am start -n com.android.settings/.Settings
-        const protocol = await adb.subprocess.shell(
-            `am start -n ${app}/${activity}`,
-        );
+
+        const cmd = `am start --activity-clear-task -n ${app}/${activity}`;
+        console.log(`cmd: ${cmd}`);
+        const protocol = await adb.subprocess.shell(cmd);
         let result = await readProtocolResult(protocol);
         console.log(result);
     });
@@ -513,10 +517,14 @@ program
                 await makeScreenshot(adb, screenshotPath);
 
                 // find region of image
-                const { tx, ty, bx, by } = await templateMatcher(
+                const matchRegion = await templateMatcher(
                     screenshotPath,
                     image,
                 );
+                if (!matchRegion) {
+                    throw new Error("cannot find image");
+                }
+                const { tx, ty, bx, by } = matchRegion;
                 target = [(tx + bx) / 2, (ty + by) / 2];
                 console.log(`match region: ${tx} ${ty} ${bx} ${by}`);
                 unlinkSync(screenshotPath);
@@ -631,40 +639,19 @@ createDeviceCommand("clear-proxy [args...]")
             .then(console.log);
     });
 
-program.parse();
-
-async function makeScreenshot(adb: Adb, output: string) {
-    const framebuffer = await adb.framebuffer();
-
-    return new Promise<void>((resolve, reject) => {
-        const png = new PNG({
-            width: framebuffer.width,
-            height: framebuffer.height,
-        });
-        png.data = Buffer.from(framebuffer.data);
-
-        const writeStream = createWriteStream(output);
-        png.pack().pipe(writeStream);
-
-        writeStream.once("finish", () => {
-            resolve();
-        });
-        writeStream.once("error", (e) => {
-            reject(e);
-        });
-    });
-}
-
-async function readProtocolResult(protocol: AdbSubprocessProtocol) {
-    const reader = protocol.stdout.getReader();
-    const decoder = new TextDecoder();
-    let result = "";
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-            break;
+createDeviceCommand("run-flow [args...]")
+    .usage("[-- <args...> ")
+    .description("run flow on device")
+    .configureHelp({ showGlobalOptions: true })
+    .action(async (args: string[], options: DeviceCommandOptions) => {
+        const adb = await createAdb(options);
+        const flow = args[0];
+        if (!flow) {
+            throw new Error("flow is required");
         }
-        result += decoder.decode(value);
-    }
-    return result;
-}
+        const flowJson = JSON.parse(readFileSync(flow, "utf8"));
+        const flowRunner = new FlowRunner();
+        await flowRunner.run(flowJson, adb, {});
+    });
+
+program.parse();
