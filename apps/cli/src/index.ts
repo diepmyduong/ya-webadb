@@ -242,7 +242,7 @@ createDeviceCommand("capture [args...]")
         await makeScreenshot(adb, output);
     });
 
-createDeviceCommand("info [args...]")
+createDeviceCommand("device-info [args...]")
     .usage("[-- <args...> ")
     .description("show device info")
     .configureHelp({ showGlobalOptions: true })
@@ -260,12 +260,32 @@ createDeviceCommand("info [args...]")
                 const knownFeature = KNOWN_FEATURES[feature];
                 return knownFeature ? `${feature} (${knownFeature})` : feature;
             }),
+            network: {
+                ip: await adb.subprocess
+                    .shell(
+                        `ifconfig | grep "inet addr" | awk '{print $2}' | cut -d ':' -f 2`,
+                    )
+                    .then(readProtocolResult)
+                    .then((res) => res.split("\r\n").filter((l) => l !== "")),
+                mac: await adb.subprocess
+                    .shell(`ifconfig | grep "HWaddr"`)
+                    .then(readProtocolResult)
+                    .then((res) => res.split("\r\n").filter((l) => l !== "")),
+                publicIp: await adb.subprocess
+                    .shell(`curl -s ipinfo.io/ip`)
+                    .then(readProtocolResult),
+            },
+            location: {
+                gps: await adb.subprocess
+                    .shell(`settings get secure location_providers_allowed`)
+                    .then(readProtocolResult),
+            },
         };
 
         console.log(JSON.stringify(info, undefined, 4));
     });
 
-createDeviceCommand("openapp [args...]")
+createDeviceCommand("open-app [args...]")
     .usage("[-- <args...> ")
     .description("open app on device")
     .configureHelp({ showGlobalOptions: true })
@@ -295,7 +315,7 @@ createDeviceCommand("openapp [args...]")
         console.log(result);
     });
 
-createDeviceCommand("listapps [args...]")
+createDeviceCommand("list-apps [args...]")
     .usage("[-- <args...> ")
     .description("list apps on device")
     .configureHelp({ showGlobalOptions: true })
@@ -316,7 +336,7 @@ createDeviceCommand("listapps [args...]")
         console.log(JSON.stringify(apps, undefined, 4));
     });
 
-createDeviceCommand("appactivity [args...]")
+createDeviceCommand("app-activity [args...]")
     .usage("[-- <args...> ")
     .description("get app activity on device")
     .configureHelp({ showGlobalOptions: true })
@@ -338,7 +358,7 @@ createDeviceCommand("appactivity [args...]")
         console.log(JSON.stringify(activities, undefined, 4));
     });
 
-createDeviceCommand("killapp [args...]")
+createDeviceCommand("kill-app [args...]")
     .usage("[-- <args...> ")
     .description("kill app on device")
     .configureHelp({ showGlobalOptions: true })
@@ -525,7 +545,7 @@ createDeviceCommand("type [args...]")
         console.log(result);
     });
 
-createDeviceCommand("keyevent [args...]")
+createDeviceCommand("key-event [args...]")
     .option("-r <repeat>", "repeat event", (value) => Number(value), 1)
     .usage("[-- <args...> ")
     .description("send keyevent on device")
@@ -558,6 +578,58 @@ createDeviceCommand("keyevent [args...]")
             }
         },
     );
+
+createDeviceCommand("set-proxy [args...]")
+    .option("-h <host>", "proxy host")
+    .option("-p <port>", "proxy port")
+    .usage("[-- <args...> ")
+    .description("set proxy on device")
+    .configureHelp({ showGlobalOptions: true })
+    .action(
+        async (
+            args: string[],
+            {
+                h,
+                p,
+                ...options
+            }: DeviceCommandOptions & {
+                h: string;
+                p: number;
+            },
+        ) => {
+            const adb = await createAdb(options);
+            const host = h;
+            const port = p;
+            if (!host || !port) {
+                throw new Error("host and port are required");
+            }
+
+            // sample command: adb shell settings put global http_proxy
+            const cmd = `settings put global http_proxy ${host}:${port}`;
+            console.log(`cmd: ${cmd}`);
+            await adb.subprocess.shell(cmd);
+
+            // verify proxy
+            await adb.subprocess
+                .shell(`settings get global http_proxy`)
+                .then(readProtocolResult)
+                .then(console.log);
+        },
+    );
+
+createDeviceCommand("clear-proxy [args...]")
+    .usage("[-- <args...> ")
+    .description("clear proxy on device")
+    .configureHelp({ showGlobalOptions: true })
+    .action(async (args: string[], options: DeviceCommandOptions) => {
+        const adb = await createAdb(options);
+        await adb.subprocess.shell(`settings put global http_proxy :0`);
+        // verify proxy
+        await adb.subprocess
+            .shell(`settings get global http_proxy`)
+            .then(readProtocolResult)
+            .then(console.log);
+    });
 
 program.parse();
 
