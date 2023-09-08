@@ -1,0 +1,56 @@
+import type { Adb } from "@yume-chan/adb";
+import {
+    WrapConsumableStream,
+    WrapReadableStream,
+} from "@yume-chan/stream-extra";
+import { existsSync } from "fs";
+import { stat } from "fs/promises";
+import { ProgressStream, createReadableStream } from "../common.js";
+import type { ITaskProvider } from "../type.js";
+
+export type UploadParams = {
+    filePath: string;
+    fileName: string;
+};
+
+export class UploadTask implements ITaskProvider {
+    name = "upload";
+
+    async execute(params: UploadParams, adb: Adb, context: any) {
+        const { filePath, fileName } = params;
+        // check if file exists
+        if (existsSync(filePath) === false) {
+            throw new Error(`File not found: ${filePath}`);
+        }
+
+        // upload file
+        const sync = await adb.sync();
+
+        const fileStat = await stat(filePath);
+
+        try {
+            await sync.write({
+                file: new WrapReadableStream(createReadableStream(filePath))
+                    .pipeThrough(new WrapConsumableStream())
+                    .pipeThrough(
+                        new ProgressStream((uploaded) => {
+                            if (uploaded !== fileStat.size) {
+                                // console.log(
+                                //     `Uploaded ${uploaded / fileStat.size}`,
+                                // );
+                            } else {
+                                console.log(`Upload done`);
+                            }
+                        }),
+                    ),
+                filename: fileName,
+            });
+        } finally {
+            await sync.dispose();
+        }
+
+        return {
+            fileName,
+        };
+    }
+}

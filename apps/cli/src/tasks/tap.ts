@@ -13,6 +13,7 @@ export class TapTask implements ITaskProvider {
 
     async execute(params: TapParams, adb: Adb, context: any) {
         const { point } = params as TapParams;
+        console.log("tap point: ", point);
         let cmd = `input tap ${point[0]} ${point[1]}`;
         // if (duration) {
         //     cmd += ` ${duration}`;

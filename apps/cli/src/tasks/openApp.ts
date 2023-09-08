@@ -11,12 +11,19 @@ export class OpenAppTask implements ITaskProvider {
     name = "open-app";
 
     async execute(params: any, adb: Adb, context: any) {
-        const { packageName, activityName } = params as OpenAppParams;
+        let { packageName, activityName } = params as OpenAppParams;
 
-        const cmd = `am start --activity-clear-task -n ${packageName}/${activityName}`;
-        await adb.subprocess
-            .shell(cmd)
-            .then(readProtocolResult)
-            .then(console.log);
+        if (!activityName) {
+            await adb.subprocess
+                .shell(`am start --activity-clear-task ${packageName}`)
+                .then(readProtocolResult)
+                .then(console.log);
+        } else {
+            const cmd = `am start --activity-clear-task -n ${packageName}/${activityName}`;
+            await adb.subprocess
+                .shell(cmd)
+                .then(readProtocolResult)
+                .then(console.log);
+        }
     }
 }

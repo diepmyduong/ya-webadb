@@ -1,0 +1,34 @@
+name: "Login Facebook Lite"
+tasks:
+    - name: "Open Facebook Lite"
+      taskName: "open-app"
+      taskParams:
+          packageName: "com.facebook.lite"
+    - name: "Focus on Email Field"
+      taskName: "search-ui-region"
+      taskParams:
+          query: "node[class='android.widget.MultiAutoCompleteTextView'][password=false]"
+          tap:
+              center: true
+      delayBeforeMs: 1000
+    - name: "Type Email"
+      taskName: "type"
+      taskParams:
+          text: "diepmyduong@gmail.com"
+    - name: "Focus on Password Field"
+      taskName: "search-ui-region"
+      taskParams:
+          query: "node[class='android.widget.MultiAutoCompleteTextView'][password=true]"
+          tap:
+              center: true
+    - name: "Type Password"
+      taskName: "type"
+      taskParams:
+          text: "123456"
+    - name: "Submit"
+      taskName: "search-ui-region"
+      taskParams:
+          query: "node[class='android.view.ViewGroup'][index=7][clickable=true]"
+          tap:
+              center: true
+      delayBeforeMs: 1000

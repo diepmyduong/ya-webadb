@@ -34,6 +34,7 @@ export class Expression {
 
             // load supported libs to the context
             isolate.compileScriptSync(libsScript).runSync(context);
+
             // set default timezone for moment libs
             // isolate
             //     .compileScriptSync(`moment.tz.setDefault("${TIMEZONE}")`)
@@ -89,6 +90,9 @@ export class Expression {
                 expressionsPromises[expression] = context
                     .eval(expression.replace(/\\(\S)/g, "$1"), { timeout: 200 }) // {{ script }} => script
                     .then((result) => {
+                        try {
+                            result = JSON.parse(result);
+                        } catch (err) {}
                         if (_.isString(result) || _.isNumber(result)) {
                             result = JSON.stringify(result)
                                 // replace escape character
@@ -101,7 +105,7 @@ export class Expression {
                                 .replace(/\\b/g, "\\b")
                                 .replace(/\\f/g, "\\f")
                                 .replace(/^\"(.*)\"$/g, "$1");
-                        } else if (_.isObject(result) || _.isBoolean(result)) {
+                        } else {
                             result = `<<Obj(${JSON.stringify(result)})Obj>>`;
                         }
                         return result || "";
@@ -161,6 +165,10 @@ export class Expression {
         // set custom methods
         _.each(methods, (method, name) => {
             context.global.setSync(name, method);
+        });
+
+        context.global.setSync("$json", function (obj: any) {
+            return JSON.stringify(obj);
         });
     }
 

@@ -1,0 +1,6 @@
+name: "config-gps-app"
+tasks:
+    - name: "Open Settings"
+      taskName: "open-app"
+      taskParams:
+          packageName: "com.android.settings"

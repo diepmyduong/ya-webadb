@@ -1,5 +1,6 @@
 import type { Adb } from "@yume-chan/adb";
 import _ from "lodash";
+import { delay } from "./common.js";
 import { Expression } from "./expression.js";
 import { taskProviderFactory } from "./taskProviderFactory.js";
 import type { IFlow } from "./type.js";
@@ -27,7 +28,9 @@ export class FlowRunner {
                     task.taskParams,
                     context,
                 );
+                if (task.delayBeforeMs) await delay(task.delayBeforeMs);
                 const result = await taskProvider.execute(params, adb, context);
+                if (task.delayAfterMs) await delay(task.delayAfterMs);
                 if (result) {
                     _.set(context, "task$" + i, result);
                 }

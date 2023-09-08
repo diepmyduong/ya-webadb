@@ -9,9 +9,10 @@ import {
     WritableStream,
 } from "@yume-chan/stream-extra";
 import { program } from "commander";
-import { mkdirSync, readFileSync, unlinkSync } from "fs";
+import { mkdirSync, unlinkSync } from "fs";
 import { AndroidKeyCode } from "./androidKeyCode.js";
 import { makeScreenshot, readProtocolResult } from "./common.js";
+import { flowParser } from "./flowParser.js";
 import { FlowRunner } from "./flowRunner.js";
 import { templateMatcher } from "./templateMatcher.js";
 
@@ -649,7 +650,7 @@ createDeviceCommand("run-flow [args...]")
         if (!flow) {
             throw new Error("flow is required");
         }
-        const flowJson = JSON.parse(readFileSync(flow, "utf8"));
+        const flowJson = await flowParser(flow);
         const flowRunner = new FlowRunner();
         await flowRunner.run(flowJson, adb, {});
     });

@@ -9,6 +9,8 @@ export interface ITask {
     name: string;
     taskName: string;
     taskParams: any;
+    delayBeforeMs?: number;
+    delayAfterMs?: number;
 }
 
 export interface IFlow {

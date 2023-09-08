@@ -5,14 +5,17 @@ import { templateMatcher } from "../templateMatcher.js";
 import type { ITaskProvider } from "../type.js";
 import { SwipeTask } from "./swipe.js";
 
-export type SearchTemplateRegionParams = {
-    templatePath: string;
-    confidence?: number; // default: 0.7, threshold for match
-    scaleSteps?: number[]; // default: [1, 0.9, 0.8, 0.7, 0.6, 0.5], scale template image to search
+export type SwipeOnNotFoundOptions = {
     swipeOnNotFound?: boolean; // default: false, if true, swipe screen and search again
     swipeDirection?: "up" | "down" | "left" | "right"; // default: "up"
     swipeSteps?: number[]; // swipe distance for each step, default: [100, 100]
 };
+
+export type SearchTemplateRegionParams = {
+    templatePath: string;
+    confidence?: number; // default: 0.7, threshold for match
+    scaleSteps?: number[]; // default: [1, 0.9, 0.8, 0.7, 0.6, 0.5], scale template image to search
+} & SwipeOnNotFoundOptions;
 
 export class SearchTemplateRegionTask implements ITaskProvider {
     name = "search-template-region";

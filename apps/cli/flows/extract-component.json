@@ -1,0 +1,38 @@
+{
+    "name": "Extract UI Component",
+    "tasks": [
+        {
+            "name": "Open settings",
+            "taskName": "open-app",
+            "taskParams": {
+                "packageName": "com.android.settings",
+                "activityName": ".Settings"
+            }
+        },
+        {
+            "name": "Search Developer options",
+            "taskName": "search-ui-region",
+            "taskParams": {
+                "query": "node[text='Developer options']",
+                "swipeOnNotFound": true,
+                "tap": {
+                    "center": true
+                }
+            },
+            "delayBeforeMs": 1000
+        },
+        {
+            "name": "Search mock location app",
+            "taskName": "search-ui-region",
+            "taskParams": {
+                "query": "node[text='Select mock location app']",
+                "swipeOnNotFound": true,
+                "swipeSteps": [200, 200, 200],
+                "tap": {
+                    "center": true
+                }
+            },
+            "delayBeforeMs": 1000
+        }
+    ]
+}

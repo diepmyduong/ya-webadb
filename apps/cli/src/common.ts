@@ -1,6 +1,8 @@
 import type { Adb, AdbSubprocessProtocol } from "@yume-chan/adb";
-import { createWriteStream } from "fs";
+import { Consumable, InspectStream } from "@yume-chan/stream-extra";
+import { createReadStream, createWriteStream } from "fs";
 import { PNG } from "pngjs";
+import { ReadableStream } from "web-streams-polyfill";
 
 export async function readProtocolResult(protocol: AdbSubprocessProtocol) {
     const reader = protocol.stdout.getReader();
@@ -36,4 +38,43 @@ export async function makeScreenshot(adb: Adb, output: string) {
             reject(e);
         });
     });
+}
+
+export async function delay(timeMs: number) {
+    return new Promise<void>((resolve) => {
+        setTimeout(() => {
+            resolve();
+        }, timeMs);
+    });
+}
+
+export function createReadableStream(filePath: string) {
+    const readStream = createReadStream(filePath);
+
+    return new ReadableStream({
+        start(controller) {
+            readStream.on("data", (chunk) => {
+                controller.enqueue(chunk);
+            });
+
+            readStream.on("end", () => {
+                controller.close();
+            });
+
+            readStream.on("error", (error) => {
+                console.log("ERROR" + error);
+                controller.error(error);
+            });
+        },
+    }) as any;
+}
+
+export class ProgressStream extends InspectStream<Consumable<Uint8Array>> {
+    public constructor(onProgress: (value: number) => void) {
+        let progress = 0;
+        super((chunk) => {
+            progress += chunk.value.byteLength;
+            onProgress(progress);
+        });
+    }
 }
