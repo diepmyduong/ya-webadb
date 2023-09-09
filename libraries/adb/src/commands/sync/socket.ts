@@ -53,12 +53,14 @@ export class AdbSyncSocketLocked implements AsyncExactReadable {
 
     async write(data: Uint8Array) {
         try {
-            await this.#writeLock.wait();
-            for (const buffer of this.#combiner.push(data)) {
-                await this.#writeInnerStream(buffer);
-            }
+            // await this.#writeLock.wait();
+            await this.#writeInnerStream(data);
+            // for (const buffer of this.#combiner.push(data)) {
+            //     console.log("write buffer", buffer.byteLength);
+            //     await this.#writeInnerStream(buffer);
+            // }
         } finally {
-            this.#writeLock.notifyOne();
+            // this.#writeLock.notifyOne();
         }
     }
 
