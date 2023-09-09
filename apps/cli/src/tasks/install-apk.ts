@@ -1,12 +1,12 @@
 import { type Adb } from "@yume-chan/adb";
+import { PackageManager } from "@yume-chan/android-bin";
 import {
-    ReadableStream,
     WrapConsumableStream,
     WrapReadableStream,
 } from "@yume-chan/stream-extra";
-import { ReadStream, createReadStream, existsSync } from "fs";
+import { existsSync } from "fs";
 import { stat } from "fs/promises";
-import { ProgressStream } from "../common.js";
+import { ProgressStream, createReadableStream } from "../common.js";
 import type { ITaskProvider } from "../type.js";
 
 export type InstallApkParams = {
@@ -24,128 +24,32 @@ export class InstallApkTask implements ITaskProvider {
             throw new Error(`File ${apkPath} does not exist`);
         }
 
-        // const start = Date.now();
+        const start = Date.now();
         const fileStat = await stat(apkPath);
+        const pm = new PackageManager(adb);
+        await pm.installStream(
+            fileStat.size,
+            new WrapReadableStream(createReadableStream(apkPath))
+                .pipeThrough(new WrapConsumableStream())
+                .pipeThrough(
+                    new ProgressStream((uploaded) => {
+                        if (uploaded !== fileStat.size) {
+                            // console.log(`Uploaded ${uploaded / fileStat.size}`);
+                        } else {
+                            console.log(`Upload done`);
+                        }
+                    }),
+                ),
+        );
 
-        const sync = await adb.sync();
+        const elapsed = Date.now() - start;
 
-        try {
-            sync.write({
-                filename: "/data/local/tmp/tmp.apk",
-                file: new WrapReadableStream(
-                    this.convertReadStreamToReadableStream(
-                        createReadStream(apkPath),
-                    ),
-                )
-                    .pipeThrough(new WrapConsumableStream())
-                    .pipeThrough(
-                        new ProgressStream((uploaded) => {
-                            if (uploaded !== fileStat.size) {
-                                console.log(
-                                    `Uploaded ${uploaded / fileStat.size}`,
-                                );
-                            } else {
-                                console.log(`Upload done`);
-                            }
-                        }),
-                    ),
-            });
-        } finally {
-            await sync.dispose();
-        }
-
-        // const pm = new PackageManager(adb);
-
-        // await pm.installStream(
-        //     fileStat.size,
-        //     new WrapReadableStream(
-        //         this.convertReadStreamToReadableStream(
-        //             createReadStream(apkPath),
-        //         ) as unknown as ReadableStream<Uint8Array>,
-        //     )
-        //         .pipeThrough(new WrapConsumableStream())
-        //         .pipeThrough(
-        //             new ProgressStream((uploaded) => {
-        //                 if (uploaded !== fileStat.size) {
-        //                     console.log(`Uploaded ${uploaded / fileStat.size}`);
-        //                 } else {
-        //                     console.log(`Upload done`);
-        //                 }
-        //             }),
-        //         ),
-        // );
-
-        // const elapsed = Date.now() - start;
-
-        // const transferRate = (
-        //     fileStat.size /
-        //     (elapsed / 1000) /
-        //     1024 /
-        //     1024
-        // ).toFixed(2);
-        // console.log(`Install finished in ${elapsed}ms at ${transferRate}MB/s`);
-    }
-
-    // private async getFile(filePath: string) {
-    //     const stats = await stat(filePath);
-    //     return {
-    //         size: stats.size,
-    //         stream: this.createReadableStream(filePath),
-    //     };
-    // }
-
-    // private createFileStream(file: File | Blob) {
-    //     // `@types/node` typing messed things up
-    //     // https://github.com/DefinitelyTyped/DefinitelyTyped/discussions/58079
-    //     // TODO: demo: remove the wrapper after switching to native stream implementation.
-    //     return new WrapReadableStream<Uint8Array>(
-    //         file.stream() as unknown as ReadableStream<Uint8Array>,
-    //     );
-    // }
-
-    // // create web file stream from file path
-    // private createReadableStream(filePath: string) {
-    //     const reader = createReadStream(filePath);
-    //     return new ReadableStream<Uint8Array>({
-    //         start(controller) {
-    //             function push() {
-    //                 const read = reader.read();
-    //                 if (read === null) {
-    //                     controller.close();
-    //                     return;
-    //                 }
-    //                 read.then(({ done, value }: any) => {
-    //                     if (done) {
-    //                         controller.close();
-    //                         return;
-    //                     }
-
-    //                     controller.enqueue(value);
-    //                     push();
-    //                 });
-    //             }
-
-    //             push();
-    //         },
-    //     });
-    // }
-
-    private convertReadStreamToReadableStream(readStream: ReadStream) {
-        return new ReadableStream({
-            start(controller) {
-                readStream.on("data", (chunk) => {
-                    controller.enqueue(chunk);
-                });
-
-                readStream.on("end", () => {
-                    console.log("END");
-                    controller.close();
-                });
-
-                readStream.on("error", (error) => {
-                    controller.error(error);
-                });
-            },
-        });
+        const transferRate = (
+            fileStat.size /
+            (elapsed / 1000) /
+            1024 /
+            1024
+        ).toFixed(2);
+        console.log(`Install finished in ${elapsed}ms at ${transferRate}MB/s`);
     }
 }

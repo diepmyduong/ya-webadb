@@ -1,8 +1,11 @@
 import type { Adb, AdbSubprocessProtocol } from "@yume-chan/adb";
-import { Consumable, InspectStream } from "@yume-chan/stream-extra";
-import { createReadStream, createWriteStream } from "fs";
+import {
+    Consumable,
+    InspectStream,
+    ReadableStream,
+} from "@yume-chan/stream-extra";
+import { ReadStream, createReadStream, createWriteStream } from "fs";
 import { PNG } from "pngjs";
-import { ReadableStream } from "web-streams-polyfill";
 
 export async function readProtocolResult(protocol: AdbSubprocessProtocol) {
     const reader = protocol.stdout.getReader();
@@ -51,22 +54,10 @@ export async function delay(timeMs: number) {
 export function createReadableStream(filePath: string) {
     const readStream = createReadStream(filePath);
 
-    return new ReadableStream({
-        start(controller) {
-            readStream.on("data", (chunk) => {
-                controller.enqueue(chunk);
-            });
+    const iterator = nodeStreamToIterator(readStream);
+    const webStream = iteratorToStream(iterator);
 
-            readStream.on("end", () => {
-                controller.close();
-            });
-
-            readStream.on("error", (error) => {
-                console.log("ERROR" + error);
-                controller.error(error);
-            });
-        },
-    }) as any;
+    return webStream;
 }
 
 export class ProgressStream extends InspectStream<Consumable<Uint8Array>> {
@@ -77,4 +68,35 @@ export class ProgressStream extends InspectStream<Consumable<Uint8Array>> {
             onProgress(progress);
         });
     }
+}
+
+/**
+ * From https://github.com/MattMorgis/async-stream-generator
+ */
+async function* nodeStreamToIterator(stream: ReadStream) {
+    for await (const chunk of stream) {
+        yield chunk;
+    }
+}
+
+/**
+ * Taken from Next.js doc
+ * https://nextjs.org/docs/app/building-your-application/routing/router-handlers#streaming
+ * Itself taken from mozilla doc
+ * https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream#convert_async_iterator_to_stream
+ * @param {*} iterator
+ * @returns {ReadableStream}
+ */
+function iteratorToStream(iterator: AsyncGenerator<Uint8Array>) {
+    return new ReadableStream({
+        async pull(controller) {
+            const { value, done } = await iterator.next();
+
+            if (done) {
+                controller.close();
+            } else {
+                controller.enqueue(new Uint8Array(value));
+            }
+        },
+    });
 }

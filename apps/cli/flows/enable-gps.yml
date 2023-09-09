@@ -1,0 +1,21 @@
+name: "Enable GPS"
+
+tasks:
+    - name: "Command enable GPS"
+      taskName: "shell"
+      taskParams:
+          command: "settings put secure location_providers_allowed +gps"
+    - name: "Command for Android 10"
+      taskName: "shell"
+      taskParams:
+          command: "settings put secure location_mode 3"
+
+    # Turn off GPS
+    # - name: "Command disable GPS"
+    #   taskName: "shell"
+    #   taskParams:
+    #       command: "settings put secure location_providers_allowed -gps"
+    # - name: "Command for Android 10"
+    #   taskName: "shell"
+    #   taskParams:
+    #       command: "settings put secure location_mode 0"

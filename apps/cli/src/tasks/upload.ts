@@ -1,4 +1,4 @@
-import type { Adb } from "@yume-chan/adb";
+import { type Adb } from "@yume-chan/adb";
 import {
     WrapConsumableStream,
     WrapReadableStream,
@@ -24,10 +24,10 @@ export class UploadTask implements ITaskProvider {
         }
 
         // upload file
-        const sync = await adb.sync();
 
         const fileStat = await stat(filePath);
 
+        const sync = await adb.sync();
         try {
             await sync.write({
                 file: new WrapReadableStream(createReadableStream(filePath))

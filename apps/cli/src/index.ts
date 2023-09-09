@@ -282,6 +282,12 @@ createDeviceCommand("device-info [args...]")
                     .shell(`settings get secure location_providers_allowed`)
                     .then(readProtocolResult),
             },
+            battery: {
+                level: await adb.subprocess
+                    .shell(`dumpsys battery | grep level`)
+                    .then(readProtocolResult)
+                    .then((res) => res.match(/\d+/)?.[0]),
+            },
         };
 
         console.log(JSON.stringify(info, undefined, 4));

@@ -5,7 +5,6 @@ tasks:
     #   taskParams:
     #       keyCode: "AndroidHome"
     - name: "Install APK"
-      taskName: "upload"
+      taskName: "install-apk"
       taskParams:
-          filePath: "big.file"
-          fileName: "/sdcard/Download/browser.png"
+          apkPath: "apks/VssID.apk"
