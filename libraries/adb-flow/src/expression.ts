@@ -1,7 +1,6 @@
 import FastQ from "fastq";
 import IsolatedVM from "isolated-vm";
 import _ from "lodash";
-import path from "path";
 
 export type ParsePayload = { text: string; data: any };
 export type ExpressionContext = {
@@ -25,7 +24,7 @@ export class Expression {
 
     constructor(options: ExpressionOptions = {}) {
         // load supported libs script
-        const libsScript = path.join(__dirname, "../scripts/bundle.js", "utf8");
+        // const libsScript = path.join(__dirname, "../scripts/bundle.js", "utf8");
 
         this.parseWorkers = _.times(options.workerNum || 4, () => {
             // init issolate
@@ -33,7 +32,7 @@ export class Expression {
             const context = isolate.createContextSync();
 
             // load supported libs to the context
-            isolate.compileScriptSync(libsScript).runSync(context);
+            // isolate.compileScriptSync(libsScript).runSync(context);
 
             // set default timezone for moment libs
             // isolate
@@ -55,7 +54,7 @@ export class Expression {
             const context = isolate.createContextSync();
 
             // load supported libs to the context
-            isolate.compileScriptSync(libsScript).runSync(context);
+            // isolate.compileScriptSync(libsScript).runSync(context);
             // set default timezone for moment libs
             // isolate
             //     .compileScriptSync(`moment.tz.setDefault("${TIMEZONE}")`)

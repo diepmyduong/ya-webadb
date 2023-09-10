@@ -1,6 +1,6 @@
 import type { Adb } from "@yume-chan/adb";
-import type { IAdbTaskProvider } from "../type";
-import { readProtocolResult } from "../utils/function";
+import type { IAdbTaskProvider } from "../type.js";
+import { readProtocolResult } from "../utils/function.js";
 
 export type ShellParams = {
     command: string;

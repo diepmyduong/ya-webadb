@@ -193,7 +193,7 @@ function App({ Component, pageProps }: AppProps) {
                     <StackItem
                         className={mergeClasses(
                             classes.leftColumn,
-                            !leftPanelVisible && classes.hidden
+                            !leftPanelVisible && classes.hidden,
                         )}
                     >
                         <Connect />

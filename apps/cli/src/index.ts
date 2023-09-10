@@ -2,6 +2,7 @@
 
 import "source-map-support/register.js";
 
+import * as AdbFlow from "@diepmyduong/adb-flow";
 import { Adb, AdbServerClient, KNOWN_FEATURES } from "@yume-chan/adb";
 import { AdbServerNodeTcpConnection } from "@yume-chan/adb-server-node-tcp";
 import {
@@ -9,7 +10,6 @@ import {
     WritableStream,
 } from "@yume-chan/stream-extra";
 import { program } from "commander";
-
 
 program
     .name("tango-cli")
@@ -224,8 +224,6 @@ createDeviceCommand("tcpip port")
         const output = await adb.tcpip.setPort(Number.parseInt(port, 10));
         process.stdout.write(output, "utf8");
     });
-
-
 
 createDeviceCommand("device-info [args...]")
     .usage("[-- <args...> ")
@@ -638,19 +636,19 @@ program
 //             .then(console.log);
 //     });
 
-// createDeviceCommand("run-flow [args...]")
-//     .usage("[-- <args...> ")
-//     .description("run flow on device")
-//     .configureHelp({ showGlobalOptions: true })
-//     .action(async (args: string[], options: DeviceCommandOptions) => {
-//         const adb = await createAdb(options);
-//         const flow = args[0];
-//         if (!flow) {
-//             throw new Error("flow is required");
-//         }
-//         const flowJson = await AdbFlowParser.fromFile(flow);
-//         const flowRunner = new AdbFlowRunner();
-//         await flowRunner.run(flowJson, adb, {});
-//     });
+createDeviceCommand("run-flow [args...]")
+    .usage("[-- <args...> ")
+    .description("run flow on device")
+    .configureHelp({ showGlobalOptions: true })
+    .action(async (args: string[], options: DeviceCommandOptions) => {
+        const adb = await createAdb(options);
+        const flow = args[0];
+        if (!flow) {
+            throw new Error("flow is required");
+        }
+        const flowJson = await AdbFlow.AdbFlowParser.fromFile(flow);
+        const flowRunner = new AdbFlow.AdbFlowRunner();
+        await flowRunner.run(flowJson, adb, {});
+    });
 
 program.parse();

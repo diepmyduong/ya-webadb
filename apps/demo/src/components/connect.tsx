@@ -59,7 +59,7 @@ function ConnectCore(): JSX.Element | null {
 
             if (!supported) {
                 GLOBAL_STATE.showErrorDialog(
-                    "Your browser does not support WebUSB standard, which is required for this site to work.\n\nLatest version of Google Chrome, Microsoft Edge, or other Chromium-based browsers are required."
+                    "Your browser does not support WebUSB standard, which is required for this site to work.\n\nLatest version of Google Chrome, Microsoft Edge, or other Chromium-based browsers are required.",
                 );
                 return;
             }
@@ -72,18 +72,18 @@ function ConnectCore(): JSX.Element | null {
 
                     if (serial) {
                         setSelected(
-                            list.find((device) => device.serial === serial)
+                            list.find((device) => device.serial === serial),
                         );
                         return;
                     }
                 },
-                globalThis.navigator.usb
+                globalThis.navigator.usb,
             );
 
             return () => watcher.dispose();
         },
         /* eslint-disable-next-line react-hooks/exhaustive-deps */
-        []
+        [],
     );
 
     const [webSocketDeviceList, setWebSocketDeviceList] = useState<
@@ -97,7 +97,7 @@ function ConnectCore(): JSX.Element | null {
 
         const parsed = JSON.parse(savedList) as { address: string }[];
         setWebSocketDeviceList(
-            parsed.map((x) => new AdbDaemonWebSocketDevice(x.address))
+            parsed.map((x) => new AdbDaemonWebSocketDevice(x.address)),
         );
     }, []);
 
@@ -111,7 +111,7 @@ function ConnectCore(): JSX.Element | null {
             copy.push(new AdbDaemonWebSocketDevice(address));
             globalThis.localStorage.setItem(
                 "ws-backend-list",
-                JSON.stringify(copy.map((x) => ({ address: x.serial })))
+                JSON.stringify(copy.map((x) => ({ address: x.serial }))),
             );
             return copy;
         });
@@ -136,8 +136,8 @@ function ConnectCore(): JSX.Element | null {
         }[];
         setTcpDeviceList(
             parsed.map(
-                (x) => new AdbDaemonDirectSocketsDevice(x.address, x.port)
-            )
+                (x) => new AdbDaemonDirectSocketsDevice(x.address, x.port),
+            ),
         );
     }, []);
 
@@ -163,8 +163,8 @@ function ConnectCore(): JSX.Element | null {
                     copy.map((x) => ({
                         address: x.host,
                         port: x.port,
-                    }))
-                )
+                    })),
+                ),
             );
             return copy;
         });
@@ -172,7 +172,7 @@ function ConnectCore(): JSX.Element | null {
 
     const handleSelectedChange = (
         e: React.FormEvent<HTMLDivElement>,
-        option?: IDropdownOption
+        option?: IDropdownOption,
     ) => {
         setSelected(option?.data as AdbDaemonDevice);
     };
@@ -200,14 +200,14 @@ function ConnectCore(): JSX.Element | null {
             readable = streams.readable.pipeThrough(
                 new InspectStream((packet) => {
                     GLOBAL_STATE.appendLog("in", packet);
-                })
+                }),
             );
 
             writable = pipeFrom(
                 streams.writable,
                 new InspectStream((packet: Consumable<AdbPacketInit>) => {
                     GLOBAL_STATE.appendLog("out", packet.value);
-                })
+                }),
             );
         } catch (e: any) {
             GLOBAL_STATE.showErrorDialog(e);
@@ -233,7 +233,7 @@ function ConnectCore(): JSX.Element | null {
                     serial: selected.serial,
                     connection: { readable, writable },
                     credentialStore: CredentialStore,
-                })
+                }),
             );
 
             device.disconnected.then(
@@ -243,7 +243,7 @@ function ConnectCore(): JSX.Element | null {
                 async (e) => {
                     GLOBAL_STATE.showErrorDialog(e);
                     await dispose();
-                }
+                },
             );
 
             GLOBAL_STATE.setDevice(selected, device);
@@ -268,9 +268,9 @@ function ConnectCore(): JSX.Element | null {
             ([] as AdbDaemonDevice[]).concat(
                 usbDeviceList,
                 webSocketDeviceList,
-                tcpDeviceList
+                tcpDeviceList,
             ),
-        [usbDeviceList, webSocketDeviceList, tcpDeviceList]
+        [usbDeviceList, webSocketDeviceList, tcpDeviceList],
     );
 
     const deviceOptions = useMemo(() => {
@@ -285,7 +285,7 @@ function ConnectCore(): JSX.Element | null {
         setSelected((old) => {
             if (old) {
                 const current = deviceList.find(
-                    (device) => device.serial === old.serial
+                    (device) => device.serial === old.serial,
                 );
                 if (current) {
                     return current;

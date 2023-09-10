@@ -2,8 +2,8 @@ import type { Adb } from "@yume-chan/adb";
 import { createWriteStream } from "fs";
 import { mkdir } from "fs/promises";
 import { pipeline } from "stream/promises";
-import type { IAdbTaskProvider } from "../type";
-import { readProtocolResult } from "../utils/function";
+import type { IAdbTaskProvider } from "../type.js";
+import { readProtocolResult } from "../utils/function.js";
 
 export type DumpUIParams = {
     output?: string;

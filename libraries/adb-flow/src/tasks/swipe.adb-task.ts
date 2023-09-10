@@ -1,6 +1,6 @@
 import _ from "lodash";
-import type { IAdbTaskProvider } from "../type";
-import { readProtocolResult } from "../utils/function";
+import type { IAdbTaskProvider } from "../type.js";
+import { readProtocolResult } from "../utils/function.js";
 export type SwipeParams = {
     action: "up" | "down" | "left" | "right" | "point";
     distance?: number; // for up/down/left/right

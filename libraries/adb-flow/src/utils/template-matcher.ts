@@ -1,6 +1,6 @@
 import { exec } from "child_process";
 import path from "path";
-import type { MatchRegion } from "../type";
+import type { MatchRegion } from "../type.js";
 
 /**
  * Find the match region of template image in background image

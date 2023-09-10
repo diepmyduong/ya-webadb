@@ -1,12 +1,17 @@
-export function asyncEffect<Args extends unknown[]>(effect: (signal: AbortSignal, ...args: Args) => Promise<void | (() => void)>) {
-    let cancelLast = () => { };
+export function asyncEffect<Args extends unknown[]>(
+    effect: (
+        signal: AbortSignal,
+        ...args: Args
+    ) => Promise<void | (() => void)>,
+) {
+    let cancelLast = () => {};
 
     return async (...args: Args) => {
         cancelLast();
         cancelLast = () => {
             // Effect finished before abortion
             // Call cleanup
-            if (typeof cleanup === 'function') {
+            if (typeof cleanup === "function") {
                 cleanup();
             }
 
@@ -23,7 +28,7 @@ export function asyncEffect<Args extends unknown[]>(effect: (signal: AbortSignal
             // Abortion requested but the effect still finished
             // Immediately call cleanup
             if (abortController.signal.aborted) {
-                if (typeof cleanup === 'function') {
+                if (typeof cleanup === "function") {
                     cleanup();
                 }
             }
@@ -31,7 +36,7 @@ export function asyncEffect<Args extends unknown[]>(effect: (signal: AbortSignal
             if (e instanceof DOMException) {
                 // Ignore errors from AbortSignal-aware APIs
                 // (e.g. `fetch`)
-                if (e.name === 'AbortError') {
+                if (e.name === "AbortError") {
                     return;
                 }
             }

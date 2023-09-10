@@ -1,9 +1,9 @@
 import type { Adb } from "@yume-chan/adb";
 import _ from "lodash";
-import { AdbTaskRegistry } from "./adb-task-registry";
-import { Expression } from "./expression";
-import type { IAdbFlow } from "./type";
-import { delay } from "./utils/function";
+import { AdbTaskRegistry } from "./adb-task-registry.js";
+import { Expression } from "./expression.js";
+import type { IAdbFlow } from "./type.js";
+import { delay } from "./utils/function.js";
 
 export class AdbFlowRunner {
     private expression = new Expression();

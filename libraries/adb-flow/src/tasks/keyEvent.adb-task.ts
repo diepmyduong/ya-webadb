@@ -1,7 +1,7 @@
 import type { Adb } from "@yume-chan/adb";
-import type { IAdbTaskProvider } from "../type";
-import { AndroidKeyCode } from "../utils/android-key-code";
-import { readProtocolResult } from "../utils/function";
+import type { IAdbTaskProvider } from "../type.js";
+import { AndroidKeyCode } from "../utils/android-key-code.js";
+import { readProtocolResult } from "../utils/function.js";
 
 export type KeyEventParams = {
     keyCode: number;

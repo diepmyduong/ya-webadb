@@ -1,5 +1,5 @@
-import { Autoloader } from "autoloader-ts";
-import type { IAdbTaskProvider } from "./type";
+import { DumpUITask, InstallApkTask, KeyEventTask } from "./index.js";
+import type { IAdbTaskProvider } from "./type.js";
 
 export class AdbTaskRegistry {
     private _taskProviders: Map<string, IAdbTaskProvider<any>>;
@@ -65,9 +65,10 @@ export class AdbTaskRegistry {
     /** Load task provider */
     private async loadTaskProviders() {
         // scan current workspace for all task providers
-        const loader = await Autoloader.dynamicImport();
-        await loader.fromGlob(__dirname + "/../**/*.adb-task.(ts|js)");
-        const exports = loader.getResult().exports;
-        return exports;
+        // const loader = await Autoloader.dynamicImport();
+        // await loader.fromGlob(__dirname + "/../**/*.adb-task.(ts|js)");
+        // const exports = loader.getResult().exports;
+        // return exports;
+        return [new DumpUITask(), new InstallApkTask(), new KeyEventTask()];
     }
 }
