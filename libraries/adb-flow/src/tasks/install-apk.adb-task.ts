@@ -6,17 +6,17 @@ import {
 } from "@yume-chan/stream-extra";
 import { existsSync } from "fs";
 import { stat } from "fs/promises";
-import { ProgressStream, createReadableStream } from "../common.js";
-import type { ITaskProvider } from "../type.js";
+import type { IAdbTaskProvider } from "../type.js";
+import { ProgressStream, createReadableStream } from "../utils/stream.js";
 
 export type InstallApkParams = {
     apkPath: string;
 };
 
-export class InstallApkTask implements ITaskProvider {
+export class InstallApkTask implements IAdbTaskProvider<InstallApkParams> {
     name = "install-apk";
 
-    async execute(params: InstallApkParams, adb: Adb, context: any) {
+    async execute(params: InstallApkParams, adb: Adb, __: any) {
         const { apkPath } = params;
 
         // check if the file exists
@@ -53,3 +53,5 @@ export class InstallApkTask implements ITaskProvider {
         console.log(`Install finished in ${elapsed}ms at ${transferRate}MB/s`);
     }
 }
+
+export default InstallApkTask;

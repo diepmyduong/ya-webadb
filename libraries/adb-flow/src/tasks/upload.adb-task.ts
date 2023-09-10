@@ -5,18 +5,18 @@ import {
 } from "@yume-chan/stream-extra";
 import { existsSync } from "fs";
 import { stat } from "fs/promises";
-import { ProgressStream, createReadableStream } from "../common.js";
-import type { ITaskProvider } from "../type.js";
+import type { IAdbTaskProvider } from "../type.js";
+import { ProgressStream, createReadableStream } from "../utils/stream.js";
 
 export type UploadParams = {
     filePath: string;
     fileName: string;
 };
 
-export class UploadTask implements ITaskProvider {
+export class UploadTask implements IAdbTaskProvider<UploadParams> {
     name = "upload";
 
-    async execute(params: UploadParams, adb: Adb, context: any) {
+    async execute(params: UploadParams, adb: Adb, __: any) {
         const { filePath, fileName } = params;
         // check if file exists
         if (existsSync(filePath) === false) {

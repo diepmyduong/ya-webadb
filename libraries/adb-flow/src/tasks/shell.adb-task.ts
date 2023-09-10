@@ -1,17 +1,19 @@
 import type { Adb } from "@yume-chan/adb";
-import { readProtocolResult } from "../common.js";
-import type { ITaskProvider } from "../type.js";
+import type { IAdbTaskProvider } from "../type";
+import { readProtocolResult } from "../utils/function";
 
 export type ShellParams = {
     command: string;
 };
 
-export class ShellTask implements ITaskProvider {
+export class ShellTask implements IAdbTaskProvider<ShellParams> {
     name = "shell";
 
-    async execute(params: ShellParams, adb: Adb, context: any) {
+    async execute(params: ShellParams, adb: Adb, __: any) {
         const { command } = params as ShellParams;
         console.log(`cmd: ${command}`);
         return await adb.subprocess.shell(command).then(readProtocolResult);
     }
 }
+
+export default ShellTask;

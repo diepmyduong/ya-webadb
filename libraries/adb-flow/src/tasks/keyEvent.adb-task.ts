@@ -1,14 +1,14 @@
 import type { Adb } from "@yume-chan/adb";
-import { AndroidKeyCode } from "../androidKeyCode.js";
-import { readProtocolResult } from "../common.js";
-import type { ITaskProvider } from "../type.js";
+import type { IAdbTaskProvider } from "../type";
+import { AndroidKeyCode } from "../utils/android-key-code";
+import { readProtocolResult } from "../utils/function";
 
 export type KeyEventParams = {
     keyCode: number;
     longpress?: boolean;
 };
 
-export class KeyEventTask implements ITaskProvider {
+export class KeyEventTask implements IAdbTaskProvider<KeyEventParams> {
     name = "key-event";
 
     keyMap = Object.keys(AndroidKeyCode).reduce(
@@ -19,7 +19,7 @@ export class KeyEventTask implements ITaskProvider {
         {} as any,
     );
 
-    async execute(params: KeyEventParams, adb: Adb, context: any) {
+    async execute(params: KeyEventParams, adb: Adb, __: any) {
         const { keyCode, longpress = false } = params;
 
         // sample command: adb shell input keyevent 3
@@ -36,3 +36,5 @@ export class KeyEventTask implements ITaskProvider {
             .then(console.log);
     }
 }
+
+export default KeyEventTask;

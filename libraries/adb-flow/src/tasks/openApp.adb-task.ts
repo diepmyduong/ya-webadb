@@ -1,16 +1,16 @@
 import type { Adb } from "@yume-chan/adb";
-import { readProtocolResult } from "../common.js";
-import type { ITaskProvider } from "../type.js";
+import type { IAdbTaskProvider } from "../type";
+import { readProtocolResult } from "../utils/function";
 
 export type OpenAppParams = {
     packageName: string;
     activityName?: string;
 };
 
-export class OpenAppTask implements ITaskProvider {
+export class OpenAppTask implements IAdbTaskProvider<OpenAppParams> {
     name = "open-app";
 
-    async execute(params: any, adb: Adb, context: any) {
+    async execute(params: OpenAppParams, adb: Adb, __: any) {
         let { packageName, activityName } = params as OpenAppParams;
 
         if (!activityName) {
@@ -27,3 +27,5 @@ export class OpenAppTask implements ITaskProvider {
         }
     }
 }
+
+export default OpenAppTask;

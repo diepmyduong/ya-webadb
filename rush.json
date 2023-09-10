@@ -510,6 +510,10 @@
         {
             "packageName": "@yume-chan/adb-cli",
             "projectFolder": "apps/cli"
+        },
+        {
+            "packageName": "@diepmyduong/adb-flow",
+            "projectFolder": "libraries/adb-flow"
         }
     ]
 }

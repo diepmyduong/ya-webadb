@@ -1,9 +1,9 @@
 import type { Adb } from "@yume-chan/adb";
 import { existsSync, mkdirSync, unlinkSync } from "fs";
-import { makeScreenshot } from "../common.js";
-import { templateMatcher } from "../templateMatcher.js";
-import type { ITaskProvider } from "../type.js";
-import { SwipeTask } from "./swipe.js";
+import type { IAdbTaskProvider } from "../type.js";
+import { makeScreenshot } from "../utils/function.js";
+import { templateMatcher } from "../utils/template-matcher.js";
+import { SwipeTask } from "./swipe.adb-task.js";
 
 export type SwipeOnNotFoundOptions = {
     swipeOnNotFound?: boolean; // default: false, if true, swipe screen and search again
@@ -15,9 +15,13 @@ export type SearchTemplateRegionParams = {
     templatePath: string;
     confidence?: number; // default: 0.7, threshold for match
     scaleSteps?: number[]; // default: [1, 0.9, 0.8, 0.7, 0.6, 0.5], scale template image to search
+    debug?: boolean; // default: false, if true, save screenshot and output image
+    debugOutput?: string; // default: "output.png", output image path
 } & SwipeOnNotFoundOptions;
 
-export class SearchTemplateRegionTask implements ITaskProvider {
+export class SearchTemplateRegionTask
+    implements IAdbTaskProvider<SearchTemplateRegionParams>
+{
     name = "search-template-region";
 
     swipeTask = new SwipeTask();
@@ -34,6 +38,8 @@ export class SearchTemplateRegionTask implements ITaskProvider {
             swipeOnNotFound = false,
             swipeDirection = "up",
             swipeSteps = [100, 100],
+            debug = false,
+            debugOutput = "output.png",
         } = params;
 
         // verify templatePath
@@ -41,12 +47,12 @@ export class SearchTemplateRegionTask implements ITaskProvider {
             throw new Error(`templatePath: ${templatePath} not exists`);
         }
 
-        const matchRegion = await this.searchTemplateRegion(
+        const matchRegion = await this.searchTemplateRegion({
             adb,
             templatePath,
             confidence,
             scaleSteps,
-        );
+        });
 
         if (!matchRegion && swipeOnNotFound) {
             for (const step of swipeSteps) {
@@ -55,12 +61,13 @@ export class SearchTemplateRegionTask implements ITaskProvider {
                     adb,
                     context,
                 );
-                const matchRegion = await this.searchTemplateRegion(
+                const matchRegion = await this.searchTemplateRegion({
                     adb,
                     templatePath,
                     confidence,
                     scaleSteps,
-                );
+                    output: debug ? debugOutput : undefined,
+                });
                 if (matchRegion) {
                     return matchRegion;
                 }
@@ -71,12 +78,14 @@ export class SearchTemplateRegionTask implements ITaskProvider {
         }
     }
 
-    private async searchTemplateRegion(
-        adb: Adb,
-        templatePath: string,
-        confidence: number,
-        scaleSteps: number[],
-    ) {
+    private async searchTemplateRegion(params: {
+        adb: Adb;
+        templatePath: string;
+        confidence: number;
+        scaleSteps: number[];
+        output?: string | undefined;
+    }) {
+        const { adb, templatePath, confidence, scaleSteps, output } = params;
         mkdirSync("tmp", { recursive: true });
         const screenshotPath = `tmp/screenshot-${new Date().getTime()}.png`;
         await makeScreenshot(adb, screenshotPath);
@@ -88,7 +97,7 @@ export class SearchTemplateRegionTask implements ITaskProvider {
             {
                 confidence: confidence,
                 scaleSteps: scaleSteps,
-                output: "output.png",
+                output: output,
             },
         );
         unlinkSync(screenshotPath);
@@ -102,3 +111,5 @@ export class SearchTemplateRegionTask implements ITaskProvider {
         };
     }
 }
+
+export default SearchTemplateRegionTask;

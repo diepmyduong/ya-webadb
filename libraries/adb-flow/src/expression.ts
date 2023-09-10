@@ -1,7 +1,7 @@
 import FastQ from "fastq";
-import { readFileSync } from "fs";
 import IsolatedVM from "isolated-vm";
 import _ from "lodash";
+import path from "path";
 
 export type ParsePayload = { text: string; data: any };
 export type ExpressionContext = {
@@ -25,9 +25,9 @@ export class Expression {
 
     constructor(options: ExpressionOptions = {}) {
         // load supported libs script
-        const libsScript = readFileSync("libs/bundle.js", "utf8");
+        const libsScript = path.join(__dirname, "../scripts/bundle.js", "utf8");
 
-        this.parseWorkers = _.times(options.workerNum || 4, (index) => {
+        this.parseWorkers = _.times(options.workerNum || 4, () => {
             // init issolate
             const isolate = new IsolatedVM.Isolate({ memoryLimit: 8 });
             const context = isolate.createContextSync();
@@ -49,7 +49,7 @@ export class Expression {
             );
         });
 
-        this.scriptWorkers = _.times(options.workerNum || 4, (index) => {
+        this.scriptWorkers = _.times(options.workerNum || 4, () => {
             // init issolate
             const isolate = new IsolatedVM.Isolate({ memoryLimit: 8 });
             const context = isolate.createContextSync();
@@ -85,7 +85,7 @@ export class Expression {
         let rawTxt = "" + text;
         const stringRegex = /{{(.*?)}}/g;
         const expressionsPromises: Record<string, Promise<any>> = {};
-        rawTxt.replace(stringRegex, (m: any, expression: string) => {
+        rawTxt.replace(stringRegex, (__: any, expression: string) => {
             if (!expressionsPromises[expression]) {
                 expressionsPromises[expression] = context
                     .eval(expression.replace(/\\(\S)/g, "$1"), { timeout: 200 }) // {{ script }} => script
@@ -126,7 +126,7 @@ export class Expression {
             return _.zipObject(_.keys(expressionsPromises), results);
         });
 
-        rawTxt = rawTxt.replace(stringRegex, (m: any, expression: string) => {
+        rawTxt = rawTxt.replace(stringRegex, (__: any, expression: string) => {
             return expressionResults[expression] || "";
         });
         return rawTxt

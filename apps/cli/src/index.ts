@@ -9,12 +9,7 @@ import {
     WritableStream,
 } from "@yume-chan/stream-extra";
 import { program } from "commander";
-import { mkdirSync, unlinkSync } from "fs";
-import { AndroidKeyCode } from "./androidKeyCode.js";
-import { makeScreenshot, readProtocolResult } from "./common.js";
-import { flowParser } from "./flowParser.js";
-import { FlowRunner } from "./flowRunner.js";
-import { templateMatcher } from "./templateMatcher.js";
+
 
 program
     .name("tango-cli")
@@ -31,6 +26,7 @@ program
             if (usage === "[options]" && cmd.options.length === 0) {
                 usage = "";
             }
+
             return `${cmd.name()} ${usage}`;
         },
     });
@@ -229,15 +225,7 @@ createDeviceCommand("tcpip port")
         process.stdout.write(output, "utf8");
     });
 
-createDeviceCommand("capture [args...]")
-    .usage("[-- <args...> ")
-    .description("capture device screenshot to given file")
-    .configureHelp({ showGlobalOptions: true })
-    .action(async (args: string[], options: DeviceCommandOptions) => {
-        const adb = await createAdb(options);
-        const output = (args[0] || "screenshot") + ".png";
-        await makeScreenshot(adb, output);
-    });
+
 
 createDeviceCommand("device-info [args...]")
     .usage("[-- <args...> ")
@@ -257,238 +245,242 @@ createDeviceCommand("device-info [args...]")
                 const knownFeature = KNOWN_FEATURES[feature];
                 return knownFeature ? `${feature} (${knownFeature})` : feature;
             }),
-            network: {
-                ip: await adb.subprocess
-                    .shell(
-                        `ifconfig | grep "inet addr" | awk '{print $2}' | cut -d ':' -f 2`,
-                    )
-                    .then(readProtocolResult)
-                    .then((res) => res.split("\r\n").filter((l) => l !== "")),
-                mac: await adb.subprocess
-                    .shell(`ifconfig | grep "HWaddr"`)
-                    .then(readProtocolResult)
-                    .then((res) => res.split("\r\n").filter((l) => l !== "")),
-                publicIp: await adb.subprocess
-                    .shell(`curl -s ipinfo.io/ip`)
-                    .then(readProtocolResult),
-                proxyIp: await adb.subprocess
-                    .shell(
-                        `curl -s ipinfo.io/ip -x "$(settings get global http_proxy)"`,
-                    )
-                    .then(readProtocolResult),
-            },
-            location: {
-                gps: await adb.subprocess
-                    .shell(`settings get secure location_providers_allowed`)
-                    .then(readProtocolResult),
-            },
-            battery: {
-                level: await adb.subprocess
-                    .shell(`dumpsys battery | grep level`)
-                    .then(readProtocolResult)
-                    .then((res) => res.match(/\d+/)?.[0]),
-            },
+            // network: {
+            //     ip: await adb.subprocess
+            //         .shell(
+            //             `ifconfig | grep "inet addr" | awk '{print $2}' | cut -d ':' -f 2`,
+            //         )
+            //         .then(readProtocolResult)
+            //         .then((res) =>
+            //             res.split("\r\n").filter((l: any) => l !== ""),
+            //         ),
+            //     mac: await adb.subprocess
+            //         .shell(`ifconfig | grep "HWaddr"`)
+            //         .then(readProtocolResult)
+            //         .then((res) =>
+            //             res.split("\r\n").filter((l: any) => l !== ""),
+            //         ),
+            //     publicIp: await adb.subprocess
+            //         .shell(`curl -s ipinfo.io/ip`)
+            //         .then(readProtocolResult),
+            //     proxyIp: await adb.subprocess
+            //         .shell(
+            //             `curl -s ipinfo.io/ip -x "$(settings get global http_proxy)"`,
+            //         )
+            //         .then(readProtocolResult),
+            // },
+            // location: {
+            //     gps: await adb.subprocess
+            //         .shell(`settings get secure location_providers_allowed`)
+            //         .then(readProtocolResult),
+            // },
+            // battery: {
+            //     level: await adb.subprocess
+            //         .shell(`dumpsys battery | grep level`)
+            //         .then(readProtocolResult)
+            //         .then((res) => res.match(/\d+/)?.[0]),
+            // },
         };
 
         console.log(JSON.stringify(info, undefined, 4));
     });
 
-createDeviceCommand("open-app [args...]")
-    .usage("[-- <args...> ")
-    .description("open app on device")
-    .configureHelp({ showGlobalOptions: true })
-    .action(async (args: string[], options: DeviceCommandOptions) => {
-        const adb = await createAdb(options);
-        const app = args[0];
-        let activity = args[1];
+// createDeviceCommand("open-app [args...]")
+//     .usage("[-- <args...> ")
+//     .description("open app on device")
+//     .configureHelp({ showGlobalOptions: true })
+//     .action(async (args: string[], options: DeviceCommandOptions) => {
+//         const adb = await createAdb(options);
+//         const app = args[0];
+//         let activity = args[1];
 
-        console.log("activity: ", activity);
+//         console.log("activity: ", activity);
 
-        if (!activity) {
-            // find default activity
-            const protocol = await adb.subprocess.shell(
-                `dumpsys package ${app} | grep -A 1 android.intent.action.MAIN:`,
-            );
-            let result = await readProtocolResult(protocol);
-            const regex = new RegExp(`${app}\/(.\\S+)`);
-            const match = regex.exec(result);
-            if (!match) {
-                throw new Error("cannot find default activity");
-            }
-            activity = match[1];
-        }
-        // sample command: adb shell am start -n com.android.settings/.Settings
+//         if (!activity) {
+//             // find default activity
+//             const protocol = await adb.subprocess.shell(
+//                 `dumpsys package ${app} | grep -A 1 android.intent.action.MAIN:`,
+//             );
+//             let result = await readProtocolResult(protocol);
+//             const regex = new RegExp(`${app}\/(.\\S+)`);
+//             const match = regex.exec(result);
+//             if (!match) {
+//                 throw new Error("cannot find default activity");
+//             }
+//             activity = match[1];
+//         }
+//         // sample command: adb shell am start -n com.android.settings/.Settings
 
-        const cmd = `am start --activity-clear-task -n ${app}/${activity}`;
-        console.log(`cmd: ${cmd}`);
-        const protocol = await adb.subprocess.shell(cmd);
-        let result = await readProtocolResult(protocol);
-        console.log(result);
-    });
+//         const cmd = `am start --activity-clear-task -n ${app}/${activity}`;
+//         console.log(`cmd: ${cmd}`);
+//         const protocol = await adb.subprocess.shell(cmd);
+//         let result = await readProtocolResult(protocol);
+//         console.log(result);
+//     });
 
-createDeviceCommand("list-apps [args...]")
-    .usage("[-- <args...> ")
-    .description("list apps on device")
-    .configureHelp({ showGlobalOptions: true })
-    .action(async (args: string[], options: DeviceCommandOptions) => {
-        const adb = await createAdb(options);
-        // sample command: adb shell pm list packages -f
-        const protocol = await adb.subprocess.shell("pm list packages -f");
-        let result = await readProtocolResult(protocol);
-        const lines = result.split("\r\n");
-        const apps = lines
-            .filter((l) => l !== "")
-            .map((line) => {
-                const parts = line.split("=");
-                const packageName = parts[1]!;
-                const appPath = parts[0]!.split(":")[1];
-                return { packageName, appPath };
-            });
-        console.log(JSON.stringify(apps, undefined, 4));
-    });
+// createDeviceCommand("list-apps [args...]")
+//     .usage("[-- <args...> ")
+//     .description("list apps on device")
+//     .configureHelp({ showGlobalOptions: true })
+//     .action(async (args: string[], options: DeviceCommandOptions) => {
+//         const adb = await createAdb(options);
+//         // sample command: adb shell pm list packages -f
+//         const protocol = await adb.subprocess.shell("pm list packages -f");
+//         let result = await readProtocolResult(protocol);
+//         const lines = result.split("\r\n");
+//         const apps = lines
+//             .filter((l: string) => l !== "")
+//             .map((line: string) => {
+//                 const parts = line.split("=");
+//                 const packageName = parts[1]!;
+//                 const appPath = parts[0]!.split(":")[1];
+//                 return { packageName, appPath };
+//             });
+//         console.log(JSON.stringify(apps, undefined, 4));
+//     });
 
-createDeviceCommand("app-activity [args...]")
-    .usage("[-- <args...> ")
-    .description("get app activity on device")
-    .configureHelp({ showGlobalOptions: true })
-    .action(async (args: string[], options: DeviceCommandOptions) => {
-        const adb = await createAdb(options);
-        const app = args[0];
-        // sample command: adb shell dumpsys package com.android.settings | grep -E 'mFocusedActivity'
-        const protocol = await adb.subprocess.shell(
-            `dumpsys package ${app} | grep -i '${app}\/' | grep Activity`,
-        );
-        let result = await readProtocolResult(protocol);
-        const regex = new RegExp(`${app}\/(.\\S+)`, "g");
-        const match = result.matchAll(regex);
-        const activities = Array.from(match)
-            .map((m) => m[1])
-            // remove duplicates
-            .filter((value, index, self) => self.indexOf(value) === index);
+// createDeviceCommand("app-activity [args...]")
+//     .usage("[-- <args...> ")
+//     .description("get app activity on device")
+//     .configureHelp({ showGlobalOptions: true })
+//     .action(async (args: string[], options: DeviceCommandOptions) => {
+//         const adb = await createAdb(options);
+//         const app = args[0];
+//         // sample command: adb shell dumpsys package com.android.settings | grep -E 'mFocusedActivity'
+//         const protocol = await adb.subprocess.shell(
+//             `dumpsys package ${app} | grep -i '${app}\/' | grep Activity`,
+//         );
+//         let result = await readProtocolResult(protocol);
+//         const regex = new RegExp(`${app}\/(.\\S+)`, "g");
+//         const match = result.matchAll(regex);
+//         const activities = Array.from(match)
+//             .map((m: any) => m[1])
+//             // remove duplicates
+//             .filter((value, index, self) => self.indexOf(value) === index);
 
-        console.log(JSON.stringify(activities, undefined, 4));
-    });
+//         console.log(JSON.stringify(activities, undefined, 4));
+//     });
 
-createDeviceCommand("kill-app [args...]")
-    .usage("[-- <args...> ")
-    .description("kill app on device")
-    .configureHelp({ showGlobalOptions: true })
-    .action(async (args: string[], options: DeviceCommandOptions) => {
-        const adb = await createAdb(options);
-        const app = args[0];
-        // sample command: adb shell am force-stop com.android.settings
-        const protocol = await adb.subprocess.shell(`am force-stop ${app}`);
-        let result = await readProtocolResult(protocol);
-        console.log(result);
-    });
+// createDeviceCommand("kill-app [args...]")
+//     .usage("[-- <args...> ")
+//     .description("kill app on device")
+//     .configureHelp({ showGlobalOptions: true })
+//     .action(async (args: string[], options: DeviceCommandOptions) => {
+//         const adb = await createAdb(options);
+//         const app = args[0];
+//         // sample command: adb shell am force-stop com.android.settings
+//         const protocol = await adb.subprocess.shell(`am force-stop ${app}`);
+//         let result = await readProtocolResult(protocol);
+//         console.log(result);
+//     });
 
-createDeviceCommand("swipe [args...]")
-    .option("-a <action>", "action type: down|up|left|right|point", "up")
-    .usage("[-- <args...> ")
-    .description("swipe on device")
-    .configureHelp({ showGlobalOptions: true })
-    .action(
-        async (
-            args: string[],
-            options: DeviceCommandOptions & {
-                a: "down" | "up" | "left" | "right" | "point";
-            },
-        ) => {
-            const adb = await createAdb(options);
-            const action = options.a;
-            let from: number[] = [0, 0];
-            let to: number[] = [0, 0];
+// createDeviceCommand("swipe [args...]")
+//     .option("-a <action>", "action type: down|up|left|right|point", "up")
+//     .usage("[-- <args...> ")
+//     .description("swipe on device")
+//     .configureHelp({ showGlobalOptions: true })
+//     .action(
+//         async (
+//             args: string[],
+//             options: DeviceCommandOptions & {
+//                 a: "down" | "up" | "left" | "right" | "point";
+//             },
+//         ) => {
+//             const adb = await createAdb(options);
+//             const action = options.a;
+//             let from: number[] = [0, 0];
+//             let to: number[] = [0, 0];
 
-            const framebuffer = await adb.framebuffer();
-            const centerPoint = [framebuffer.width / 2, framebuffer.height / 2];
+//             const framebuffer = await adb.framebuffer();
+//             const centerPoint = [framebuffer.width / 2, framebuffer.height / 2];
 
-            switch (action) {
-                case "down": {
-                    const distance = Number(args[0]) || 100;
-                    from = [
-                        centerPoint[0]!,
-                        Math.max(centerPoint[1]! - distance / 2, 100),
-                    ];
-                    to = [
-                        centerPoint[0]!,
-                        Math.min(
-                            centerPoint[1]! + distance / 2,
-                            framebuffer.height - 100,
-                        ),
-                    ];
-                    break;
-                }
-                case "up": {
-                    const distance = Number(args[0]) || 100;
-                    from = [
-                        centerPoint[0]!,
-                        Math.min(
-                            centerPoint[1]! + distance / 2,
-                            framebuffer.height - 100,
-                        ),
-                    ];
-                    to = [
-                        centerPoint[0]!,
-                        Math.max(centerPoint[1]! - distance / 2, 100),
-                    ];
-                    break;
-                }
-                case "left": {
-                    const distance = Number(args[0]) || 100;
-                    from = [
-                        Math.min(
-                            centerPoint[0]! + distance / 2,
-                            framebuffer.width - 100,
-                        ),
-                        centerPoint[1]!,
-                    ];
-                    to = [
-                        Math.max(
-                            centerPoint[0]! - distance / 2,
-                            framebuffer.width - 100,
-                        ),
-                        centerPoint[1]!,
-                    ];
-                    break;
-                }
-                case "right": {
-                    const distance = Number(args[0]) || 100;
-                    from = [
-                        Math.max(
-                            centerPoint[0]! - distance / 2,
-                            framebuffer.width,
-                        ),
-                        centerPoint[1]!,
-                    ];
-                    to = [
-                        Math.min(
-                            centerPoint[0]! + distance / 2,
-                            framebuffer.width,
-                        ),
-                        centerPoint[1]!,
-                    ];
-                    break;
-                }
-                case "point": {
-                    if (!args[0]) {
-                        throw new Error("point is required");
-                    }
-                    const [x1, y1, x2, y2] = args[0].split(":");
-                    from = [Number(x1), Number(y1)];
-                    to = [Number(x2), Number(y2)];
-                    break;
-                }
-            }
-            // sample command: adb shell input swipe 100 500 100 1450
-            const cmd = `input swipe ${from.join(" ")} ${to.join(" ")}`;
-            console.log(`action: ${action} cmd: ${cmd}`);
-            const protocol = await adb.subprocess.shell(
-                `input swipe ${from.join(" ")} ${to.join(" ")}`,
-            );
-            let result = await readProtocolResult(protocol);
-            console.log(result);
-        },
-    );
+//             switch (action) {
+//                 case "down": {
+//                     const distance = Number(args[0]) || 100;
+//                     from = [
+//                         centerPoint[0]!,
+//                         Math.max(centerPoint[1]! - distance / 2, 100),
+//                     ];
+//                     to = [
+//                         centerPoint[0]!,
+//                         Math.min(
+//                             centerPoint[1]! + distance / 2,
+//                             framebuffer.height - 100,
+//                         ),
+//                     ];
+//                     break;
+//                 }
+//                 case "up": {
+//                     const distance = Number(args[0]) || 100;
+//                     from = [
+//                         centerPoint[0]!,
+//                         Math.min(
+//                             centerPoint[1]! + distance / 2,
+//                             framebuffer.height - 100,
+//                         ),
+//                     ];
+//                     to = [
+//                         centerPoint[0]!,
+//                         Math.max(centerPoint[1]! - distance / 2, 100),
+//                     ];
+//                     break;
+//                 }
+//                 case "left": {
+//                     const distance = Number(args[0]) || 100;
+//                     from = [
+//                         Math.min(
+//                             centerPoint[0]! + distance / 2,
+//                             framebuffer.width - 100,
+//                         ),
+//                         centerPoint[1]!,
+//                     ];
+//                     to = [
+//                         Math.max(
+//                             centerPoint[0]! - distance / 2,
+//                             framebuffer.width - 100,
+//                         ),
+//                         centerPoint[1]!,
+//                     ];
+//                     break;
+//                 }
+//                 case "right": {
+//                     const distance = Number(args[0]) || 100;
+//                     from = [
+//                         Math.max(
+//                             centerPoint[0]! - distance / 2,
+//                             framebuffer.width,
+//                         ),
+//                         centerPoint[1]!,
+//                     ];
+//                     to = [
+//                         Math.min(
+//                             centerPoint[0]! + distance / 2,
+//                             framebuffer.width,
+//                         ),
+//                         centerPoint[1]!,
+//                     ];
+//                     break;
+//                 }
+//                 case "point": {
+//                     if (!args[0]) {
+//                         throw new Error("point is required");
+//                     }
+//                     const [x1, y1, x2, y2] = args[0].split(":");
+//                     from = [Number(x1), Number(y1)];
+//                     to = [Number(x2), Number(y2)];
+//                     break;
+//                 }
+//             }
+//             // sample command: adb shell input swipe 100 500 100 1450
+//             const cmd = `input swipe ${from.join(" ")} ${to.join(" ")}`;
+//             console.log(`action: ${action} cmd: ${cmd}`);
+//             const protocol = await adb.subprocess.shell(
+//                 `input swipe ${from.join(" ")} ${to.join(" ")}`,
+//             );
+//             let result = await readProtocolResult(protocol);
+//             console.log(result);
+//         },
+//     );
 
 program
     .command("kill-server")
@@ -499,166 +491,166 @@ program
         await client.killServer();
     });
 
-program
-    .command("tap [args...]")
-    .option("--image <image>", "image file path")
-    .option("--point <point>", "point to tap (x:y)")
-    .usage("[-- <args...> ")
-    .description("tap on device")
-    .configureHelp({ showGlobalOptions: true })
-    .action(
-        async (
-            args: string[],
-            {
-                image,
-                point,
-                ...options
-            }: DeviceCommandOptions & { image: string; point: string },
-        ) => {
-            const adb = await createAdb(options);
-            let target = [0, 0];
-            if (image) {
-                // make a screenshot
-                mkdirSync("tmp", { recursive: true });
-                const screenshotPath = `tmp/screenshot-${new Date().getTime()}.png`;
-                await makeScreenshot(adb, screenshotPath);
+// program
+//     .command("tap [args...]")
+//     .option("--image <image>", "image file path")
+//     .option("--point <point>", "point to tap (x:y)")
+//     .usage("[-- <args...> ")
+//     .description("tap on device")
+//     .configureHelp({ showGlobalOptions: true })
+//     .action(
+//         async (
+//             args: string[],
+//             {
+//                 image,
+//                 point,
+//                 ...options
+//             }: DeviceCommandOptions & { image: string; point: string },
+//         ) => {
+//             const adb = await createAdb(options);
+//             let target = [0, 0];
+//             if (image) {
+//                 // make a screenshot
+//                 mkdirSync("tmp", { recursive: true });
+//                 const screenshotPath = `tmp/screenshot-${new Date().getTime()}.png`;
+//                 await makeScreenshot(adb, screenshotPath);
 
-                // find region of image
-                const matchRegion = await templateMatcher(
-                    screenshotPath,
-                    image,
-                );
-                if (!matchRegion) {
-                    throw new Error("cannot find image");
-                }
-                const { tx, ty, bx, by } = matchRegion;
-                target = [(tx + bx) / 2, (ty + by) / 2];
-                console.log(`match region: ${tx} ${ty} ${bx} ${by}`);
-                unlinkSync(screenshotPath);
-            } else if (point) {
-                target = point.split(":").map((p) => Number(p));
-            }
-            // sample command: adb shell input tap 100 500
-            const cmd = `input tap ${target.join(" ")}`;
-            console.log(`cmd: ${cmd}`);
-            const protocol = await adb.subprocess.shell(cmd);
-            let result = await readProtocolResult(protocol);
-            console.log(result);
-        },
-    );
+//                 // find region of image
+//                 const matchRegion = await templateMatcher(
+//                     screenshotPath,
+//                     image,
+//                 );
+//                 if (!matchRegion) {
+//                     throw new Error("cannot find image");
+//                 }
+//                 const { tx, ty, bx, by } = matchRegion;
+//                 target = [(tx + bx) / 2, (ty + by) / 2];
+//                 console.log(`match region: ${tx} ${ty} ${bx} ${by}`);
+//                 unlinkSync(screenshotPath);
+//             } else if (point) {
+//                 target = point.split(":").map((p) => Number(p));
+//             }
+//             // sample command: adb shell input tap 100 500
+//             const cmd = `input tap ${target.join(" ")}`;
+//             console.log(`cmd: ${cmd}`);
+//             const protocol = await adb.subprocess.shell(cmd);
+//             let result = await readProtocolResult(protocol);
+//             console.log(result);
+//         },
+//     );
 
-createDeviceCommand("type [args...]")
-    .usage("[-- <args...> ")
-    .description("type on device")
-    .configureHelp({ showGlobalOptions: true })
-    .action(async (args: string[], options: DeviceCommandOptions) => {
-        const adb = await createAdb(options);
-        const text = args[0];
-        // sample command: adb shell input text "hello world"
-        const protocol = await adb.subprocess.shell(`input text "${text}"`);
-        let result = await readProtocolResult(protocol);
-        console.log(result);
-    });
+// createDeviceCommand("type [args...]")
+//     .usage("[-- <args...> ")
+//     .description("type on device")
+//     .configureHelp({ showGlobalOptions: true })
+//     .action(async (args: string[], options: DeviceCommandOptions) => {
+//         const adb = await createAdb(options);
+//         const text = args[0];
+//         // sample command: adb shell input text "hello world"
+//         const protocol = await adb.subprocess.shell(`input text "${text}"`);
+//         let result = await readProtocolResult(protocol);
+//         console.log(result);
+//     });
 
-createDeviceCommand("key-event [args...]")
-    .option("-r <repeat>", "repeat event", (value) => Number(value), 1)
-    .usage("[-- <args...> ")
-    .description("send keyevent on device")
-    .configureHelp({ showGlobalOptions: true })
-    .action(
-        async (
-            args: string[],
-            { r, ...options }: DeviceCommandOptions & { r: number },
-        ) => {
-            const adb = await createAdb(options);
-            const key = args[0];
+// createDeviceCommand("key-event [args...]")
+//     .option("-r <repeat>", "repeat event", (value) => Number(value), 1)
+//     .usage("[-- <args...> ")
+//     .description("send keyevent on device")
+//     .configureHelp({ showGlobalOptions: true })
+//     .action(
+//         async (
+//             args: string[],
+//             { r, ...options }: DeviceCommandOptions & { r: number },
+//         ) => {
+//             const adb = await createAdb(options);
+//             const key = args[0];
 
-            if (!key) {
-                throw new Error("key is required");
-            }
+//             if (!key) {
+//                 throw new Error("key is required");
+//             }
 
-            const keyMap = Object.keys(AndroidKeyCode).reduce(
-                (map, key) => ({
-                    ...map,
-                    [AndroidKeyCode[key as keyof typeof AndroidKeyCode]]: key,
-                }),
-                {} as any,
-            );
+//             const keyMap = Object.keys(AndroidKeyCode).reduce(
+//                 (map, key) => ({
+//                     ...map,
+//                     [AndroidKeyCode[key as keyof typeof AndroidKeyCode]]: key,
+//                 }),
+//                 {} as any,
+//             );
 
-            // sample command: adb shell input keyevent 3
-            const cmd = `input keyevent ${keyMap[key] ? keyMap[key] : key}`;
-            console.log(`cmd: ${cmd}`);
-            for (let i = 0; i < r; i++) {
-                await adb.subprocess.shell(cmd);
-            }
-        },
-    );
+//             // sample command: adb shell input keyevent 3
+//             const cmd = `input keyevent ${keyMap[key] ? keyMap[key] : key}`;
+//             console.log(`cmd: ${cmd}`);
+//             for (let i = 0; i < r; i++) {
+//                 await adb.subprocess.shell(cmd);
+//             }
+//         },
+//     );
 
-createDeviceCommand("set-proxy [args...]")
-    .option("-h <host>", "proxy host")
-    .option("-p <port>", "proxy port")
-    .usage("[-- <args...> ")
-    .description("set proxy on device")
-    .configureHelp({ showGlobalOptions: true })
-    .action(
-        async (
-            args: string[],
-            {
-                h,
-                p,
-                ...options
-            }: DeviceCommandOptions & {
-                h: string;
-                p: number;
-            },
-        ) => {
-            const adb = await createAdb(options);
-            const host = h;
-            const port = p;
-            if (!host || !port) {
-                throw new Error("host and port are required");
-            }
+// createDeviceCommand("set-proxy [args...]")
+//     .option("-h <host>", "proxy host")
+//     .option("-p <port>", "proxy port")
+//     .usage("[-- <args...> ")
+//     .description("set proxy on device")
+//     .configureHelp({ showGlobalOptions: true })
+//     .action(
+//         async (
+//             args: string[],
+//             {
+//                 h,
+//                 p,
+//                 ...options
+//             }: DeviceCommandOptions & {
+//                 h: string;
+//                 p: number;
+//             },
+//         ) => {
+//             const adb = await createAdb(options);
+//             const host = h;
+//             const port = p;
+//             if (!host || !port) {
+//                 throw new Error("host and port are required");
+//             }
 
-            // sample command: adb shell settings put global http_proxy
-            const cmd = `settings put global http_proxy ${host}:${port}`;
-            console.log(`cmd: ${cmd}`);
-            await adb.subprocess.shell(cmd);
+//             // sample command: adb shell settings put global http_proxy
+//             const cmd = `settings put global http_proxy ${host}:${port}`;
+//             console.log(`cmd: ${cmd}`);
+//             await adb.subprocess.shell(cmd);
 
-            // verify proxy
-            await adb.subprocess
-                .shell(`settings get global http_proxy`)
-                .then(readProtocolResult)
-                .then(console.log);
-        },
-    );
+//             // verify proxy
+//             await adb.subprocess
+//                 .shell(`settings get global http_proxy`)
+//                 .then(readProtocolResult)
+//                 .then(console.log);
+//         },
+//     );
 
-createDeviceCommand("clear-proxy [args...]")
-    .usage("[-- <args...> ")
-    .description("clear proxy on device")
-    .configureHelp({ showGlobalOptions: true })
-    .action(async (args: string[], options: DeviceCommandOptions) => {
-        const adb = await createAdb(options);
-        await adb.subprocess.shell(`settings put global http_proxy :0`);
-        // verify proxy
-        await adb.subprocess
-            .shell(`settings get global http_proxy`)
-            .then(readProtocolResult)
-            .then(console.log);
-    });
+// createDeviceCommand("clear-proxy [args...]")
+//     .usage("[-- <args...> ")
+//     .description("clear proxy on device")
+//     .configureHelp({ showGlobalOptions: true })
+//     .action(async (args: string[], options: DeviceCommandOptions) => {
+//         const adb = await createAdb(options);
+//         await adb.subprocess.shell(`settings put global http_proxy :0`);
+//         // verify proxy
+//         await adb.subprocess
+//             .shell(`settings get global http_proxy`)
+//             .then(readProtocolResult)
+//             .then(console.log);
+//     });
 
-createDeviceCommand("run-flow [args...]")
-    .usage("[-- <args...> ")
-    .description("run flow on device")
-    .configureHelp({ showGlobalOptions: true })
-    .action(async (args: string[], options: DeviceCommandOptions) => {
-        const adb = await createAdb(options);
-        const flow = args[0];
-        if (!flow) {
-            throw new Error("flow is required");
-        }
-        const flowJson = await flowParser(flow);
-        const flowRunner = new FlowRunner();
-        await flowRunner.run(flowJson, adb, {});
-    });
+// createDeviceCommand("run-flow [args...]")
+//     .usage("[-- <args...> ")
+//     .description("run flow on device")
+//     .configureHelp({ showGlobalOptions: true })
+//     .action(async (args: string[], options: DeviceCommandOptions) => {
+//         const adb = await createAdb(options);
+//         const flow = args[0];
+//         if (!flow) {
+//             throw new Error("flow is required");
+//         }
+//         const flowJson = await AdbFlowParser.fromFile(flow);
+//         const flowRunner = new AdbFlowRunner();
+//         await flowRunner.run(flowJson, adb, {});
+//     });
 
 program.parse();

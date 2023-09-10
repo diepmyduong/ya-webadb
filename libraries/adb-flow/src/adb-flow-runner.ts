@@ -1,22 +1,31 @@
 import type { Adb } from "@yume-chan/adb";
 import _ from "lodash";
-import { delay } from "./common.js";
-import { Expression } from "./expression.js";
-import { taskProviderFactory } from "./taskProviderFactory.js";
-import type { IFlow } from "./type.js";
+import { AdbTaskRegistry } from "./adb-task-registry";
+import { Expression } from "./expression";
+import type { IAdbFlow } from "./type";
+import { delay } from "./utils/function";
 
-export class FlowRunner {
+export class AdbFlowRunner {
     private expression = new Expression();
+    private taskRegistry = new AdbTaskRegistry();
+
     constructor() {}
 
-    async run(flow: IFlow, adb: Adb, context: any) {
+    /**
+     * Run adb flow script
+     * @param flow adb flow script
+     * @param adb adb instance
+     * @param context init context for the flow
+     */
+    async run(flow: IAdbFlow, adb: Adb, context: any = {}) {
         console.log("Running flow: " + flow.name);
+        await this.taskRegistry.initailize();
         // init context
         for (let i = 0; i < flow.tasks.length; i++) {
             const now = new Date().getTime();
             const task = flow.tasks[i]!;
             try {
-                const taskProvider = taskProviderFactory.getTaskProvider(
+                const taskProvider = this.taskRegistry.getTaskProvider(
                     task.taskName,
                 );
                 if (!taskProvider) {

@@ -1,11 +1,12 @@
 import type { Adb } from "@yume-chan/adb";
 import cheerio from "cheerio";
 import fs, { unlink } from "fs/promises";
-import type { ITaskProvider } from "../type.js";
-import { DumpUITask, type DumpUIParams } from "./dumpUI.js";
-import type { SwipeOnNotFoundOptions } from "./search-template-region.js";
-import { SwipeTask } from "./swipe.js";
-import { TapTask } from "./tap.js";
+
+import type { IAdbTaskProvider } from "../type.js";
+import { DumpUITask, type DumpUIParams } from "./dump-ui.adb-task.js";
+import type { SwipeOnNotFoundOptions } from "./search-template-region.adb-task.js";
+import { SwipeTask } from "./swipe.adb-task.js";
+import { TapTask } from "./tap.adb-task.js";
 
 export type TapBoundsOptions = {
     center?: boolean; // default: false, tap center of bounds
@@ -19,7 +20,7 @@ export type SearchUIRegionParams = {
 } & DumpUIParams &
     SwipeOnNotFoundOptions;
 
-export class SearchUIRegion implements ITaskProvider {
+export class SearchUIRegion implements IAdbTaskProvider<SearchUIRegionParams> {
     name = "search-ui-region";
 
     dumpUITask = new DumpUITask();
@@ -123,3 +124,5 @@ export class SearchUIRegion implements ITaskProvider {
         };
     }
 }
+
+export default SearchUIRegion;

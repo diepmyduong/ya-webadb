@@ -1,0 +1,38 @@
+{
+  "name": "test",
+  "version": "0.1.0",
+  "license": "MIT",
+  "author": "diepmyduong@outlook.com.vn",
+  "main": "dist/index.js",
+  "module": "dist/test.esm.js",
+  "typings": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "analyze": "size-limit --why",
+    "build": "dts build",
+    "lint": "dts lint",
+    "size": "size-limit",
+    "start": "dts watch",
+    "test": "dts test"
+  },
+  "prettier": {
+    "printWidth": 80,
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "es5"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.0",
+    "dts-cli": "~2.0.3",
+    "@tsconfig/recommended": "~1.0.2"
+  }
+}

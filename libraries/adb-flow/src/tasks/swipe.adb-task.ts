@@ -1,17 +1,16 @@
 import _ from "lodash";
-import { readProtocolResult } from "../common.js";
-import type { ITaskProvider } from "../type.js";
-
+import type { IAdbTaskProvider } from "../type";
+import { readProtocolResult } from "../utils/function";
 export type SwipeParams = {
     action: "up" | "down" | "left" | "right" | "point";
     distance?: number; // for up/down/left/right
     vector?: number[]; // for point
 };
 
-export class SwipeTask implements ITaskProvider {
+export class SwipeTask implements IAdbTaskProvider<SwipeParams> {
     name: string = "swipe";
 
-    async execute(params: SwipeParams, adb: any, context: any) {
+    async execute(params: SwipeParams, adb: any, __: any) {
         const { action, distance = _.random(50, 100), vector } = params;
         let from: number[] = [0, 0];
         let to: number[] = [0, 0];
@@ -95,3 +94,5 @@ export class SwipeTask implements ITaskProvider {
             .then(console.log);
     }
 }
+
+export default SwipeTask;
